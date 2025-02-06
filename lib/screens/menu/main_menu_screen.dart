@@ -4,6 +4,41 @@ import 'package:flutter/services.dart';
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
 
+  void _showExitConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text("Close"),
+          content: const Text("Are you sure you want to close the app?"),
+          actions: [
+            OutlinedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.blue,
+                side: const BorderSide(color: Colors.blue),
+              ),
+              child: const Text("Cancel"),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
@@ -61,7 +96,7 @@ class MainMenuScreen extends StatelessWidget {
           () {}, // Setup game action
           () {}, // Options action
           () {}, // Help action
-          () => SystemNavigator.pop(), // Close app
+          () => _showExitConfirmationDialog(context), // Close app
     ];
 
     return List.generate(buttonTitles.length, (index) {
