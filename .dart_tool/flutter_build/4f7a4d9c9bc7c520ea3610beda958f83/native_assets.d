@@ -1,0 +1,1 @@
+ C:\\git\\chockablock\\chockablock\\.dart_tool\\flutter_build\\4f7a4d9c9bc7c520ea3610beda958f83\\native_assets.yaml: 
