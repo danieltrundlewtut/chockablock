@@ -14,12 +14,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
   late Animation<Offset> _slideAnimation;
   Widget? _slidingContent;
   bool _isMenuVisible = true;
+  bool _slidingFromRight = false;
 
   @override
   void initState() {
     super.initState();
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _slideAnimation = Tween<Offset>(
@@ -31,10 +32,45 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
     ));
   }
 
-  @override
-  void dispose() {
-    _slideController.dispose();
-    super.dispose();
+  void _slideInOptions(Widget content) {
+    setState(() {
+      _slidingContent = content;
+      _slidingFromRight = false;
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 0),
+        end: const Offset(-1.0, 0),
+      ).animate(CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeInOut,
+      ));
+      _isMenuVisible = false;
+    });
+    _slideController.forward();
+  }
+
+  void _slideInHelp(Widget content) {
+    setState(() {
+      _slidingContent = content;
+      _slidingFromRight = true;
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 0),
+        end: const Offset(1.0, 0),
+      ).animate(CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeInOut,
+      ));
+      _isMenuVisible = false;
+    });
+    _slideController.forward();
+  }
+
+  void _returnToMainMenu() {
+    _slideController.reverse().then((_) {
+      setState(() {
+        _isMenuVisible = true;
+        _slidingContent = null;
+      });
+    });
   }
 
   void _showExitConfirmationDialog(BuildContext context) {
@@ -67,43 +103,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
     );
   }
 
-  void _slideToNewContent(Widget content, bool slideLeft) {
-    setState(() {
-      _slidingContent = content;
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(0, 0),
-        end: Offset(slideLeft ? -1.0 : 1.0, 0),
-      ).animate(CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeInOut,
-      ));
-      _isMenuVisible = false;
-    });
-    _slideController.forward();
-  }
-
-  void _returnToMainMenu() {
-    _slideController.reverse().then((_) {
-      setState(() {
-        _isMenuVisible = true;
-        _slidingContent = null;
-      });
-    });
-  }
-
   List<Widget> _buildMenuButtons(double buttonHeight, BuildContext context) {
     final List<String> buttonTitles = ['Quick game', 'Setup game', 'Options', 'Help', 'Close'];
     final List<VoidCallback> actions = [
           () {}, // Quick game action
           () {}, // Setup game action
-          () => _slideToNewContent(
-        OptionsMenu(onBack: _returnToMainMenu),
-        true,
-      ),
-          () => _slideToNewContent(
-        HelpMenu(onBack: _returnToMainMenu),
-        false,
-      ),
+          () => _slideInOptions(OptionsMenu(onBack: _returnToMainMenu)),
+          () => _slideInHelp(HelpMenu(onBack: _returnToMainMenu)),
           () => _showExitConfirmationDialog(context),
     ];
 
@@ -188,7 +194,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
           if (!_isMenuVisible && _slidingContent != null)
             SlideTransition(
               position: Tween<Offset>(
-                begin: Offset(_slideAnimation.value.dx < 0 ? 1.0 : -1.0, 0),
+                begin: Offset(_slidingFromRight ? 1.0 : -1.0, 0),
                 end: const Offset(0, 0),
               ).animate(_slideController),
               child: _slidingContent!,

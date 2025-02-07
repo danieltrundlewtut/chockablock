@@ -7,16 +7,17 @@ class HelpMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.04),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: MediaQuery.of(context).size.width * 0.8,
+            width: double.infinity,
             height: MediaQuery.of(context).size.height * 0.6,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -32,7 +33,6 @@ class HelpMenu extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Add your help content here
                   Text(
                     'Placeholder help content goes here. You can add multiple paragraphs, '
                         'images, and other widgets as needed.\n\n'
@@ -46,19 +46,16 @@ class HelpMenu extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 40),
-              child: ElevatedButton(
-                onPressed: onBack,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.blue.shade900,
-                ),
-                child: const Text('Back'),
+            alignment: Alignment.bottomRight,
+            child: ElevatedButton(
+              onPressed: onBack,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blue.shade900,
               ),
+              child: const Text('Main menu'),
             ),
           ),
         ],
