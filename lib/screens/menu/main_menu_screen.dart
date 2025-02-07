@@ -1,8 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'options_menu.dart';
+import 'help_menu.dart';
 
-class MainMenuScreen extends StatelessWidget {
+class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
+
+  @override
+  State<MainMenuScreen> createState() => _MainMenuScreenState();
+}
+
+class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+  Widget? _slidingContent;
+  bool _isMenuVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0),
+      end: const Offset(-1.0, 0),
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    super.dispose();
+  }
 
   void _showExitConfirmationDialog(BuildContext context) {
     showDialog(
@@ -13,20 +46,15 @@ class MainMenuScreen extends StatelessWidget {
           content: const Text("Are you sure you want to close the app?"),
           actions: [
             OutlinedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.blue,
                 side: const BorderSide(color: Colors.blue),
               ),
               child: const Text("Cancel"),
             ),
-
             ElevatedButton(
-              onPressed: () {
-                SystemNavigator.pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
@@ -39,64 +67,44 @@ class MainMenuScreen extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final double buttonHeight = screenHeight * 0.08;
+  void _slideToNewContent(Widget content, bool slideLeft) {
+    setState(() {
+      _slidingContent = content;
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 0),
+        end: Offset(slideLeft ? -1.0 : 1.0, 0),
+      ).animate(CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeInOut,
+      ));
+      _isMenuVisible = false;
+    });
+    _slideController.forward();
+  }
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade700, Colors.blue.shade900],
-          ),
-        ),
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 40), // Adjust top spacing
-              child: Center(
-                child: Text(
-                  'Chock-A-Block',
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-
-            Align(
-              alignment: Alignment.centerRight, // Aligns the column of buttons to the right
-              child: Padding(
-                padding: const EdgeInsets.only(right: 20), // Adjust right spacing
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Prevents extra space
-                  crossAxisAlignment: CrossAxisAlignment.end, // Aligns buttons to the right
-                  children: _buildMenuButtons(buttonHeight, context),
-                ),
-              ),
-            ),
-            const Spacer()
-          ],
-        ),
-      ),
-    );
+  void _returnToMainMenu() {
+    _slideController.reverse().then((_) {
+      setState(() {
+        _isMenuVisible = true;
+        _slidingContent = null;
+      });
+    });
   }
 
   List<Widget> _buildMenuButtons(double buttonHeight, BuildContext context) {
     final List<String> buttonTitles = ['Quick game', 'Setup game', 'Options', 'Help', 'Close'];
-    final List<VoidCallback?> actions = [
+    final List<VoidCallback> actions = [
           () {}, // Quick game action
           () {}, // Setup game action
-          () {}, // Options action
-          () {}, // Help action
-          () => _showExitConfirmationDialog(context), // Close app
+          () => _slideToNewContent(
+        OptionsMenu(onBack: _returnToMainMenu),
+        true,
+      ),
+          () => _slideToNewContent(
+        HelpMenu(onBack: _returnToMainMenu),
+        false,
+      ),
+          () => _showExitConfirmationDialog(context),
     ];
 
     return List.generate(buttonTitles.length, (index) {
@@ -118,5 +126,75 @@ class MainMenuScreen extends StatelessWidget {
         ),
       );
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double buttonHeight = screenHeight * 0.08;
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background gradient
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.blue.shade700, Colors.blue.shade900],
+              ),
+            ),
+          ),
+          // Main content
+          if (_isMenuVisible)
+            SlideTransition(
+              position: _slideAnimation,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text(
+                        'Chock-A-Block',
+                        style: TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: screenWidth * 0.04),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: _buildMenuButtons(buttonHeight, context),
+                      ),
+                    ),
+                  ),
+                  const Spacer()
+                ],
+              ),
+            ),
+          // Sliding content (Options and Help menus)
+          if (!_isMenuVisible && _slidingContent != null)
+            SlideTransition(
+              position: Tween<Offset>(
+                begin: Offset(_slideAnimation.value.dx < 0 ? 1.0 : -1.0, 0),
+                end: const Offset(0, 0),
+              ).animate(_slideController),
+              child: _slidingContent!,
+            ),
+        ],
+      ),
+    );
   }
 }
