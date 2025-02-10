@@ -1,76 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../transitions/menu_transitions.dart';
 import 'options_menu.dart';
 import 'help_menu.dart';
 
-class MainMenuScreen extends StatefulWidget {
+class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
 
-  @override
-  State<MainMenuScreen> createState() => _MainMenuScreenState();
-}
-
-class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _slideController;
-  late Animation<Offset> _slideAnimation;
-  Widget? _slidingContent;
-  bool _isMenuVisible = true;
-  bool _slidingFromRight = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
+  void _navigateToOptionsMenu(BuildContext context) {
+    Navigator.push(
+      context,
+      CoordinatedSlideTransition(
+        enterPage: OptionsMenu(onBack: () => Navigator.pop(context)),
+        slideFromLeft: true,
+      ),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0),
-      end: const Offset(-1.0, 0),
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeInOut,
-    ));
   }
 
-  void _slideInOptions(Widget content) {
-    setState(() {
-      _slidingContent = content;
-      _slidingFromRight = false;
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(0, 0),
-        end: const Offset(-1.0, 0),
-      ).animate(CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeInOut,
-      ));
-      _isMenuVisible = false;
-    });
-    _slideController.forward();
-  }
-
-  void _slideInHelp(Widget content) {
-    setState(() {
-      _slidingContent = content;
-      _slidingFromRight = true;
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(0, 0),
-        end: const Offset(1.0, 0),
-      ).animate(CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeInOut,
-      ));
-      _isMenuVisible = false;
-    });
-    _slideController.forward();
-  }
-
-  void _returnToMainMenu() {
-    _slideController.reverse().then((_) {
-      setState(() {
-        _isMenuVisible = true;
-        _slidingContent = null;
-      });
-    });
+  void _navigateToHelpMenu(BuildContext context) {
+    Navigator.push(
+      context,
+      CoordinatedSlideTransition(
+        enterPage: HelpMenu(onBack: () => Navigator.pop(context)),
+        slideFromLeft: false,
+      ),
+    );
   }
 
   void _showExitConfirmationDialog(BuildContext context) {
@@ -90,7 +44,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => SystemNavigator.pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
@@ -108,8 +62,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
     final List<VoidCallback> actions = [
           () {}, // Quick game action
           () {}, // Setup game action
-          () => _slideInOptions(OptionsMenu(onBack: _returnToMainMenu)),
-          () => _slideInHelp(HelpMenu(onBack: _returnToMainMenu)),
+          () => _navigateToOptionsMenu(context),
+          () => _navigateToHelpMenu(context),
           () => _showExitConfirmationDialog(context),
     ];
 
@@ -156,49 +110,35 @@ class _MainMenuScreenState extends State<MainMenuScreen> with SingleTickerProvid
             ),
           ),
           // Main content
-          if (_isMenuVisible)
-            SlideTransition(
-              position: _slideAnimation,
-              child: Column(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 40),
-                    child: Center(
-                      child: Text(
-                        'Chock-A-Block',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+          Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: Center(
+                  child: Text(
+                    'Chock-A-Block',
+                    style: TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: EdgeInsets.only(right: screenWidth * 0.04),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: _buildMenuButtons(buttonHeight, context),
-                      ),
-                    ),
-                  ),
-                  const Spacer()
-                ],
+                ),
               ),
-            ),
-          // Sliding content (Options and Help menus)
-          if (!_isMenuVisible && _slidingContent != null)
-            SlideTransition(
-              position: Tween<Offset>(
-                begin: Offset(_slidingFromRight ? 1.0 : -1.0, 0),
-                end: const Offset(0, 0),
-              ).animate(_slideController),
-              child: _slidingContent!,
-            ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: EdgeInsets.only(right: screenWidth * 0.04),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: _buildMenuButtons(buttonHeight, context),
+                  ),
+                ),
+              ),
+              const Spacer()
+            ],
+          ),
         ],
       ),
     );

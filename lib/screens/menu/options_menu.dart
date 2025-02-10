@@ -22,64 +22,63 @@ class _OptionsMenuState extends State<OptionsMenu> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.04),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.height * 0.6,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                DefaultTabController(
-                  length: _tabs.length,
-                  child: Column(
-                    children: [
-                      TabBar(
-                        onTap: (index) {
-                          setState(() {
-                            _selectedTab = index;
-                          });
-                        },
-                        tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-                        labelColor: Colors.blue.shade900,
-                        unselectedLabelColor: Colors.blue.shade300,
-                        indicatorColor: Colors.blue.shade900,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                          _placeholderContent[_selectedTab],
-                          style: TextStyle(
-                            color: Colors.blue.shade900,
-                            fontSize: 16,
-                          ),
+    return Material(
+      color: Colors.transparent,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.04),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: double.infinity,
+              height: MediaQuery.of(context).size.height * 0.6,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DefaultTabController(
+                length: _tabs.length,
+                child: Column(
+                  children: [
+                    TabBar(
+                      onTap: (index) {
+                        setState(() {
+                          _selectedTab = index;
+                        });
+                      },
+                      tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
+                      labelColor: Colors.blue.shade900,
+                      unselectedLabelColor: Colors.blue.shade300,
+                      indicatorColor: Colors.blue.shade900,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        _placeholderContent[_selectedTab],
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontSize: 16,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ElevatedButton(
-              onPressed: widget.onBack,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue.shade900,
               ),
-              child: const Text('Main menu'),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton(
+                onPressed: widget.onBack,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue.shade900,
+                ),
+                child: const Text('Main menu'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
