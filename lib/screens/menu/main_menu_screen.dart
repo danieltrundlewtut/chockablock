@@ -1,11 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../transitions/menu_transitions.dart';
+import '../../widgets/loading_widget.dart';
+import '../game_screen_classic.dart';
 import 'options_menu.dart';
 import 'help_menu.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
+
+  Future<void> _startQuickGame(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const LoadingDialog(message: 'Loading...');
+      },
+    );
+
+    // Simulate loading time (remove in production)
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (context.mounted) {
+      Navigator.of(context).pop();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const GameScreen()),
+      );
+    }
+  }
 
   void _navigateToOptionsMenu(BuildContext context) {
     Navigator.push(
@@ -60,7 +83,7 @@ class MainMenuScreen extends StatelessWidget {
   List<Widget> _buildMenuButtons(double buttonHeight, BuildContext context) {
     final List<String> buttonTitles = ['Quick game', 'Setup game', 'Options', 'Help', 'Close'];
     final List<VoidCallback> actions = [
-          () {}, // Quick game action
+          () => _startQuickGame(context),
           () {}, // Setup game action
           () => _navigateToOptionsMenu(context),
           () => _navigateToHelpMenu(context),
