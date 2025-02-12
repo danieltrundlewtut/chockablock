@@ -77,7 +77,7 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               Column(
                 children: [
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 15),
                   Center(
                     child: GameBoard(
                       cellSize: cellSize,
@@ -86,7 +86,6 @@ class _GameScreenState extends State<GameScreen> {
                       onPieceRemoved: onPieceRemoved,
                     ),
                   ),
-                  const Spacer(),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Center(
