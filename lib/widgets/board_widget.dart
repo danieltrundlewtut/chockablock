@@ -157,12 +157,10 @@ class _GameBoardState extends State<GameBoard> {
                 return Positioned(
                   left: position.col * widget.cellSize,
                   top: position.row * widget.cellSize,
-                  child: GestureDetector(
-                    onTap: () => widget.onPieceRemoved(piece),
-                    child: PieceWidget(
-                      piece: piece,
-                      cellSize: widget.cellSize,
-                    ),
+                  child: PieceWidget(
+                    piece: piece,
+                    cellSize: widget.cellSize,
+                    onTap: () {},
                   ),
                 );
               }),
