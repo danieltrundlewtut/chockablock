@@ -1,7 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens//menu/main_menu_screen.dart';
+import 'screens/menu/main_menu_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +12,8 @@ void main() {
 
 class ChockABlock extends StatelessWidget {
   const ChockABlock({super.key});
+
+
 
   @override
   Widget build(BuildContext context) {
