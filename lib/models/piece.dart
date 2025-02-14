@@ -1,10 +1,11 @@
+import 'package:chockablock/models/board_position.dart';
 import 'package:flutter/material.dart';
 
 class ChockABlockPiece {
   final String id;
   List<List<bool>> pattern;
   final Color color;
-  int rotationDegrees = 0;
+  BoardPosition? position;
 
   ChockABlockPiece({
     required this.id,
@@ -12,13 +13,20 @@ class ChockABlockPiece {
     required this.color,
   });
 
-  // Will be implemented later for piece manipulation
   void rotateRight() {
-    rotationDegrees = (rotationDegrees + 90) % 360;
-  }
+    final rows = pattern.length;
+    final cols = pattern[0].length;
+    List<List<bool>> rotated = List.generate(
+        cols,
+            (i) => List.generate(rows, (j) => false)
+    );
 
-  void rotateLeft() {
-    rotationDegrees = (rotationDegrees - 90) % 360;
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        rotated[j][rows - 1 - i] = pattern[i][j];
+      }
+    }
+    pattern = rotated;
   }
 
   void flipPiece() {
