@@ -1,4 +1,5 @@
 import 'package:chockablock/models/piece.dart';
+import 'package:chockablock/widgets/piece_widget.dart';
 import 'package:chockablock/widgets/pieces_interface_widget.dart';
 import 'package:flutter/material.dart';
 import '../models/board_position.dart';
@@ -14,14 +15,29 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   List<ChockABlockPiece> availablePieces = [];
-  List<ChockABlockPiece> placedPieces = [];
+  List<PieceWidget> placedPieces = [];
   ChockABlockPiece? draggingPiece;
-  Map<String, BoardPosition> piecePlacements = {};
+  late double boardWidth;
+  late double cellSize;
 
   @override
   void initState() {
     super.initState();
     availablePieces = PieceData.getAllPieces();
+    // Remove MediaQuery calculations from initState
+  }
+
+  // Add this method to calculate sizes after layout
+  void _updateSizes() {
+    boardWidth = ((MediaQuery.of(context).size.width) * 0.6);
+    cellSize = boardWidth / 11;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Calculate sizes here instead of initState
+    _updateSizes();
   }
 
   bool isValidPlacement(BoardPosition position, ChockABlockPiece piece) {
@@ -29,39 +45,48 @@ class _GameScreenState extends State<GameScreen> {
     return true;
   }
 
-  void onPiecePlaced(ChockABlockPiece piece, BoardPosition position) {
+  void onPiecePlaced(ChockABlockPiece piece, int row, int col) {
+    BoardPosition position = BoardPosition(row, col);
     if (isValidPlacement(position, piece)) {
       setState(() {
-        if (draggingPiece != null) {
-          // If the piece was already placed somewhere, remove old placement
-          piecePlacements.remove(piece.id);
+        piece.position = position;
 
-          // Add new placement
-          piecePlacements[piece.id] = position;
+        final pieceWidget = PieceWidget(
+          key: ValueKey(piece.id),
+          piece: piece,
+          cellSize: cellSize,
+          position: position,
+          onTap: () => onPieceRemoved(piece),
+        );
 
-          // If piece wasn't previously placed, move it from available to placed
-          if (!placedPieces.contains(piece)) {
-            availablePieces.remove(piece);
-            placedPieces.add(piece);
+        if (!placedPieces.any((p) => p.piece.id == piece.id)) {
+          availablePieces.removeWhere((p) => p.id == piece.id);
+          placedPieces.add(pieceWidget);
+        } else {
+          final index = placedPieces.indexWhere((p) => p.piece.id == piece.id);
+          if (index != -1) {
+            placedPieces[index] = pieceWidget;
           }
         }
+
+        draggingPiece = null;
       });
     }
   }
 
   void onPieceRemoved(ChockABlockPiece piece) {
     setState(() {
-      placedPieces.remove(piece);
-      availablePieces.add(piece);
-      piecePlacements.remove(piece.id);
+      placedPieces.removeWhere((widget) => widget.piece.id == piece.id);
+      if (!availablePieces.any((p) => p.id == piece.id)) {
+        availablePieces.add(piece);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final boardWidth = (screenWidth * 0.6);
-    final cellSize = boardWidth / 11;
+    // Recalculate sizes on build to handle orientation changes
+    _updateSizes();
 
     return Scaffold(
       body: Container(
@@ -81,9 +106,9 @@ class _GameScreenState extends State<GameScreen> {
                   Center(
                     child: GameBoard(
                       cellSize: cellSize,
-                      piecePlacements: piecePlacements,
-                      pieces: [...availablePieces, ...placedPieces],
-                      onPieceRemoved: onPieceRemoved,
+                      placedPieces: placedPieces,
+                      onDragUpdate: (position) {},
+                      onPiecePlaced: onPiecePlaced,
                     ),
                   ),
                   Padding(
@@ -98,10 +123,12 @@ class _GameScreenState extends State<GameScreen> {
                             draggingPiece = piece;
                           });
                         },
-                        onDragEnded: () {
-                          setState(() {
-                            draggingPiece = null;
-                          });
+                        onDragEnded: (piece) {
+                          if (draggingPiece != null) {
+                            setState(() {
+                              draggingPiece = null;
+                            });
+                          }
                         },
                       ),
                     ),

@@ -5,10 +5,9 @@ import 'piece_widget.dart';
 class PiecesInterface extends StatefulWidget {
   final List<ChockABlockPiece> pieces;
   final double cellSize;
-
   final ChockABlockPiece? draggingPiece;
   final Function(ChockABlockPiece) onDragStarted;
-  final VoidCallback onDragEnded;
+  final Function(ChockABlockPiece) onDragEnded;
 
   const PiecesInterface({
     super.key,
@@ -18,12 +17,19 @@ class PiecesInterface extends StatefulWidget {
     required this.onDragStarted,
     required this.onDragEnded,
   });
+
   @override
   State<PiecesInterface> createState() => _PiecesInterfaceState();
 }
 
 class _PiecesInterfaceState extends State<PiecesInterface> {
   void onPieceTapped(ChockABlockPiece piece) {
+    setState(() {
+      piece.rotateRight();
+    });
+  }
+
+  void onPieceLongPressed(ChockABlockPiece piece) {
     setState(() {
       piece.flipPiece();
     });
@@ -46,25 +52,35 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: GestureDetector(
                 onTap: () => onPieceTapped(piece),
+                onLongPress: () => onPieceLongPressed(piece),
                 child: Draggable<ChockABlockPiece>(
                   data: piece,
-                  feedback: PieceWidget(
-                    piece: piece,
-                    cellSize: widget.cellSize * 2,
-                    onTap: () {},
+                  feedback: Transform.translate(
+                    offset: Offset(
+                      -widget.cellSize * piece.pattern[0].length / 2,
+                      -widget.cellSize * piece.pattern.length / 2,
+                    ),
+                    child: PieceWidget(
+                      piece: piece,
+                      position: piece.position,
+                      cellSize: widget.cellSize * 2,
+                      onTap: () {},
+                    ),
                   ),
                   childWhenDragging: Opacity(
                     opacity: 0.5,
                     child: PieceWidget(
                       piece: piece,
+                      position: null,
                       cellSize: widget.cellSize,
                       onTap: () {},
                     ),
                   ),
                   onDragStarted: () => widget.onDragStarted(piece),
-                  onDragEnd: (_) => widget.onDragEnded(),
+                  onDragEnd: (_) => widget.onDragEnded(piece),
                   child: PieceWidget(
                     piece: piece,
+                    position: null,
                     cellSize: widget.cellSize,
                     onTap: () => onPieceTapped(piece),
                   ),

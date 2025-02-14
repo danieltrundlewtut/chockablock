@@ -1,21 +1,20 @@
-import 'package:chockablock/widgets/piece_widget.dart';
-
-import '../models/piece.dart';
 import 'package:flutter/material.dart';
+import '../widgets/piece_widget.dart';
+import '../models/piece.dart';
 import '../models/board_position.dart';
 
 class GameBoard extends StatefulWidget {
   final double cellSize;
-  final Map<String, BoardPosition> piecePlacements;
-  final List<ChockABlockPiece> pieces;
-  final Function(ChockABlockPiece) onPieceRemoved;
+  final List<PieceWidget> placedPieces;
+  final Function(Offset position) onDragUpdate;
+  final Function(ChockABlockPiece piece, int row, int col) onPiecePlaced;
 
   const GameBoard({
     super.key,
     required this.cellSize,
-    required this.piecePlacements,
-    required this.pieces,
-    required this.onPieceRemoved,
+    required this.placedPieces,
+    required this.onDragUpdate,
+    required this.onPiecePlaced,
   });
 
   @override
@@ -26,29 +25,58 @@ class _GameBoardState extends State<GameBoard> {
   BoardPosition? hoverPosition;
   ChockABlockPiece? hoverPiece;
   bool isValidPlacement = false;
+  bool isDragging = false;
 
   BoardPosition _getBoardPosition(Offset localPosition) {
-    // Snap to grid by rounding to nearest cell
     final row = (localPosition.dy / widget.cellSize).round();
     final col = (localPosition.dx / widget.cellSize).round();
     return BoardPosition(row, col);
   }
 
+  bool _doPiecesCollide(ChockABlockPiece piece, BoardPosition position, ChockABlockPiece placedPiece) {
+    if (placedPiece.position == null) return false;
+
+    for (int row = 0; row < piece.pattern.length; row++) {
+      for (int col = 0; col < piece.pattern[row].length; col++) {
+        if (piece.pattern[row][col]) {
+          int newRow = position.row + row;
+          int newCol = position.col + col;
+
+          for (int pieceX = 0; pieceX < placedPiece.pattern.length; pieceX++) {
+            for (int pieceY = 0; pieceY < placedPiece.pattern[pieceX].length; pieceY++) {
+              if (placedPiece.pattern[pieceX][pieceY]) {
+                int placedRow = placedPiece.position!.row + pieceX;
+                int placedCol = placedPiece.position!.col + pieceY;
+
+                if (newRow == placedRow && newCol == placedCol) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   bool _isValidPosition(BoardPosition position, ChockABlockPiece piece) {
-    // Check if any part of the piece would be outside the board
     for (int row = 0; row < piece.pattern.length; row++) {
       for (int col = 0; col < piece.pattern[row].length; col++) {
         if (piece.pattern[row][col]) {
           final boardRow = position.row + row;
           final boardCol = position.col + col;
 
-          // Check board boundaries
-          if (boardRow < 0 || boardRow >= 5 || boardCol < 0 || boardCol >= 11) {
+          if (boardRow < 0 || boardRow >= 5 ||
+              boardCol < 0 || boardCol >= 11) {
             return false;
           }
 
-          // Check collision with other pieces
-          // TODO: Implement collision detection with placed pieces
+          for (var placedPiece in widget.placedPieces) {
+            if (_doPiecesCollide(piece, position, placedPiece.piece)) {
+              return false;
+            }
+          }
         }
       }
     }
@@ -56,7 +84,8 @@ class _GameBoardState extends State<GameBoard> {
   }
 
   List<Positioned> _buildPreviewCells() {
-    if (hoverPosition == null || hoverPiece == null) return [];
+    // Only show preview cells if actively dragging
+    if (!isDragging || hoverPosition == null || hoverPiece == null) return [];
 
     final Color previewColor = isValidPlacement
         ? Colors.yellow
@@ -71,7 +100,6 @@ class _GameBoardState extends State<GameBoard> {
           final boardRow = hoverPosition!.row + row;
           final boardCol = hoverPosition!.col + col;
 
-          // Show all cells of the piece, even if out of bounds (they'll be red)
           previewCells.add(
             Positioned(
               left: boardCol * widget.cellSize,
@@ -96,21 +124,32 @@ class _GameBoardState extends State<GameBoard> {
     return previewCells;
   }
 
+  void _clearPreview() {
+    setState(() {
+      hoverPosition = null;
+      hoverPiece = null;
+      isValidPlacement = false;
+      isDragging = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return DragTarget<ChockABlockPiece>(
-      onWillAccept: (piece) => true,
+      onWillAccept: (piece) {
+        setState(() {
+          isDragging = true;
+        });
+        return true;
+      },
       onAccept: (piece) {
         if (hoverPosition != null && isValidPlacement) {
-          // Handle piece placement
+          widget.onPiecePlaced(piece, hoverPosition!.row, hoverPosition!.col);
         }
+        _clearPreview();
       },
       onLeave: (piece) {
-        setState(() {
-          hoverPosition = null;
-          hoverPiece = null;
-          isValidPlacement = false;
-        });
+        _clearPreview();
       },
       onMove: (details) {
         final RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -130,9 +169,8 @@ class _GameBoardState extends State<GameBoard> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Stack(
-            clipBehavior: Clip.none, // Allow preview to overflow
+            clipBehavior: Clip.none,
             children: [
-              // Base grid
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(5, (row) {
@@ -150,21 +188,14 @@ class _GameBoardState extends State<GameBoard> {
                   );
                 }),
               ),
-              // Placed pieces
-              ...widget.piecePlacements.entries.map((entry) {
-                final piece = widget.pieces.firstWhere((p) => p.id == entry.key);
-                final position = entry.value;
+              ...widget.placedPieces.map((piece) {
+                if (piece.position == null) return const SizedBox.shrink();
                 return Positioned(
-                  left: position.col * widget.cellSize,
-                  top: position.row * widget.cellSize,
-                  child: PieceWidget(
-                    piece: piece,
-                    cellSize: widget.cellSize,
-                    onTap: () {},
-                  ),
+                  left: piece.position!.col * widget.cellSize,
+                  top: piece.position!.row * widget.cellSize,
+                  child: piece,
                 );
               }),
-              // Preview cells
               ..._buildPreviewCells(),
             ],
           ),
