@@ -50,9 +50,12 @@ class PieceWidget extends StatelessWidget {
     if (position != null) {
       return Draggable<ChockABlockPiece>(
         data: piece,
-        feedback: _buildPieceContent(),
+        feedback: Opacity(
+          opacity: 0.5,
+          child: _buildPieceContent(),
+        ),
         childWhenDragging: Opacity(
-          opacity: 0.3,
+          opacity: 0.5,
           child: _buildPieceContent(),
         ),
         child: _buildPieceContent(),

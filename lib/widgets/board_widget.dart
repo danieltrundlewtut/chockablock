@@ -23,18 +23,32 @@ class GameBoard extends StatefulWidget {
 
 class _GameBoardState extends State<GameBoard> {
   BoardPosition? hoverPosition;
+  BoardPosition? newPosition;
   ChockABlockPiece? hoverPiece;
   bool isValidPlacement = false;
   bool isDragging = false;
+  bool isFromInterface = false;
 
-  BoardPosition _getBoardPosition(Offset localPosition) {
-    final row = (localPosition.dy / widget.cellSize).round();
-    final col = (localPosition.dx / widget.cellSize).round();
+  BoardPosition _getBoardPosition(Offset localPosition, ChockABlockPiece piece) {
+    final pieceHeight = piece.pattern.length;
+    final pieceWidth = piece.pattern[0].length;
+
+    final adjustedX = isFromInterface
+        ? localPosition.dx - (pieceWidth * widget.cellSize / 4)
+        : localPosition.dx;
+    final adjustedY = isFromInterface
+        ? localPosition.dy - (pieceHeight * widget.cellSize / 4)
+        : localPosition.dy;
+
+    final col = (adjustedX / widget.cellSize).round();
+    final row = (adjustedY / widget.cellSize).round();
+
     return BoardPosition(row, col);
   }
 
   bool _doPiecesCollide(ChockABlockPiece piece, BoardPosition position, ChockABlockPiece placedPiece) {
     if (placedPiece.position == null) return false;
+    if (placedPiece == piece) return false;
 
     for (int row = 0; row < piece.pattern.length; row++) {
       for (int col = 0; col < piece.pattern[row].length; col++) {
@@ -139,6 +153,7 @@ class _GameBoardState extends State<GameBoard> {
       onWillAccept: (piece) {
         setState(() {
           isDragging = true;
+          isFromInterface = !widget.placedPieces.any((p) => p.piece.id == piece?.id);
         });
         return true;
       },
@@ -147,27 +162,30 @@ class _GameBoardState extends State<GameBoard> {
           widget.onPiecePlaced(piece, hoverPosition!.row, hoverPosition!.col);
         }
         _clearPreview();
+        isFromInterface = false;
       },
       onLeave: (piece) {
         _clearPreview();
+        isFromInterface = false;
       },
       onMove: (details) {
         final RenderBox renderBox = context.findRenderObject() as RenderBox;
         final localPosition = renderBox.globalToLocal(details.offset);
-        final newPosition = _getBoardPosition(localPosition);
+        newPosition = _getBoardPosition(localPosition, details.data);
 
         setState(() {
           hoverPosition = newPosition;
           hoverPiece = details.data;
-          isValidPlacement = _isValidPosition(newPosition, details.data);
+          isValidPlacement = _isValidPosition(newPosition!, details.data);
         });
       },
       builder: (context, candidateData, rejectedData) {
         return Container(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.black38),
-            borderRadius: BorderRadius.circular(4),
-          ),
+              color: Colors.white,
+              border: Border.all(color: Colors.black38),
+              borderRadius: BorderRadius.circular(4),
+            ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -193,6 +211,7 @@ class _GameBoardState extends State<GameBoard> {
                 return Positioned(
                   left: piece.position!.col * widget.cellSize,
                   top: piece.position!.row * widget.cellSize,
+
                   child: piece,
                 );
               }),

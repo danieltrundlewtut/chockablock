@@ -16,6 +16,7 @@ class PiecesInterface extends StatefulWidget {
     required this.draggingPiece,
     required this.onDragStarted,
     required this.onDragEnded,
+    required List<PieceWidget> placedPieces,
   });
 
   @override
@@ -55,16 +56,19 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
                 onLongPress: () => onPieceLongPressed(piece),
                 child: Draggable<ChockABlockPiece>(
                   data: piece,
-                  feedback: Transform.translate(
-                    offset: Offset(
-                      -widget.cellSize * piece.pattern[0].length / 2,
-                      -widget.cellSize * piece.pattern.length / 2,
-                    ),
-                    child: PieceWidget(
-                      piece: piece,
-                      position: piece.position,
-                      cellSize: widget.cellSize * 2,
-                      onTap: () {},
+                  feedback: Opacity(
+                    opacity: 0.5,
+                    child: Transform.translate(
+                      offset: Offset(
+                        -widget.cellSize * piece.pattern[0].length / 2,
+                        -widget.cellSize * piece.pattern.length / 2,
+                      ),
+                      child: PieceWidget(
+                        piece: piece,
+                        position: piece.position,
+                        cellSize: widget.cellSize * 2,
+                        onTap: () {},
+                      ),
                     ),
                   ),
                   childWhenDragging: Opacity(
