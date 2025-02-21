@@ -19,7 +19,7 @@ class PieceData {
           [true, true],
           [true, false],
         ],
-        color: Colors.blue,
+        color: const Color(0xFF2196F3),
       ),
       ChockABlockPiece(
         id: 'clifford', // Clifford Brown
@@ -29,7 +29,7 @@ class PieceData {
           [true, true],
           [true, false],
         ],
-        color: const Color(0xFFD51C1C),
+        color: const Color(0xFFC72300),
       ),
       ChockABlockPiece(
         id: 'louis', // Louis Armstrong
@@ -38,7 +38,7 @@ class PieceData {
           [true, true, false],
           [false, true, false],
         ],
-        color: const Color(0xFF5A1CD5),
+        color: const Color(0xFF9000B8),
       ),
       ChockABlockPiece(
         id: 'nina', // Nina Simone
@@ -55,7 +55,7 @@ class PieceData {
           [false, true, false],
           [true, true, true],
         ],
-        color: const Color(0xFF49D610),
+        color: const Color(0xFF51F211),
       ),
       ChockABlockPiece(
         id: 'betty', // Betty Carter
@@ -65,7 +65,7 @@ class PieceData {
           [true, false],
           [true, false],
         ],
-        color: const Color(0xFFF324E9),
+        color: const Color(0xFFFFA2FF),
       ),
       ChockABlockPiece(
         id: 'charlie', // Charlie Parker
@@ -83,7 +83,7 @@ class PieceData {
           [true, false],
           [true, true],
         ],
-        color: const Color(0xFF10D67D),
+        color: const Color(0xFFA8E60E),
       ),
       ChockABlockPiece(
         id: 'ray', // Ray Charles
@@ -93,7 +93,7 @@ class PieceData {
           [true, false],
           [true, false],
         ],
-        color: const Color(0xFF0057AE),
+        color: const Color(0xFF01F09C),
       ),
       ChockABlockPiece(
         id: 'ronnie', // Ronnie Cuber
@@ -102,7 +102,7 @@ class PieceData {
           [true, true],
           [true, true],
         ],
-        color: const Color(0xFF4135B6),
+        color: const Color(0xFF0041C2),
       ),
       ChockABlockPiece(
         id: 'benny', // Benny Goodman
@@ -111,7 +111,7 @@ class PieceData {
           [true, false, false],
           [true, true, true],
         ],
-        color: const Color(0xFFFBCD14),
+        color: const Color(0xFF907BD9),
       ),
     ];
   }

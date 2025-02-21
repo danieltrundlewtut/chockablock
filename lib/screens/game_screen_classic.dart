@@ -24,10 +24,8 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     availablePieces = PieceData.getAllPieces();
-    // Remove MediaQuery calculations from initState
   }
 
-  // Add this method to calculate sizes after layout
   void _updateSizes() {
     boardWidth = ((MediaQuery.of(context).size.width) * 0.6);
     cellSize = boardWidth / 11;
@@ -36,42 +34,33 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Calculate sizes here instead of initState
     _updateSizes();
-  }
-
-  bool isValidPlacement(BoardPosition position, ChockABlockPiece piece) {
-    // TODO: Implement actual validation logic
-    return true;
   }
 
   void onPiecePlaced(ChockABlockPiece piece, int row, int col) {
     BoardPosition position = BoardPosition(row, col);
-    if (isValidPlacement(position, piece)) {
-      setState(() {
-        piece.position = position;
+    setState(() {
+      piece.position = position;
 
-        final pieceWidget = PieceWidget(
-          key: ValueKey(piece.id),
-          piece: piece,
-          cellSize: cellSize,
-          position: position,
-          onTap: () => onPieceRemoved(piece),
-        );
+      final pieceWidget = PieceWidget(
+        key: ValueKey(piece.id),
+        piece: piece,
+        cellSize: cellSize,
+        position: position,
+        onTap: () => onPieceRemoved(piece),
+      );
 
-        if (!placedPieces.any((p) => p.piece.id == piece.id)) {
-          availablePieces.removeWhere((p) => p.id == piece.id);
-          placedPieces.add(pieceWidget);
-        } else {
-          final index = placedPieces.indexWhere((p) => p.piece.id == piece.id);
-          if (index != -1) {
-            placedPieces[index] = pieceWidget;
-          }
+      if (!placedPieces.any((p) => p.piece.id == piece.id)) {
+        availablePieces.removeWhere((p) => p.id == piece.id);
+        placedPieces.add(pieceWidget);
+      } else {
+        final index = placedPieces.indexWhere((p) => p.piece.id == piece.id);
+        if (index != -1) {
+          placedPieces[index] = pieceWidget;
         }
-
-        draggingPiece = null;
-      });
-    }
+      }
+      draggingPiece = null;
+    });
   }
 
   void onPieceRemoved(ChockABlockPiece piece) {
@@ -85,7 +74,6 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Recalculate sizes on build to handle orientation changes
     _updateSizes();
 
     return Scaffold(
@@ -116,6 +104,7 @@ class _GameScreenState extends State<GameScreen> {
                     child: Center(
                       child: PiecesInterface(
                         pieces: availablePieces,
+                        placedPieces: placedPieces,
                         cellSize: cellSize * 0.4,
                         draggingPiece: draggingPiece,
                         onDragStarted: (piece) {
