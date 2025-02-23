@@ -211,7 +211,6 @@ class _GameBoardState extends State<GameBoard> {
                 return Positioned(
                   left: piece.position!.col * widget.cellSize,
                   top: piece.position!.row * widget.cellSize,
-
                   child: piece,
                 );
               }),

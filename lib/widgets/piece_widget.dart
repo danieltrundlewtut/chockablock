@@ -55,7 +55,7 @@ class PieceWidget extends StatelessWidget {
           child: _buildPieceContent(),
         ),
         childWhenDragging: Opacity(
-          opacity: 0.5,
+          opacity: 0.3,
           child: _buildPieceContent(),
         ),
         child: _buildPieceContent(),
