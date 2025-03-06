@@ -86,6 +86,7 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
                 position: null,
                 cellSize: widget.cellSize,
                 onTap: () => {},
+                onDragStart: (touchPosition, draggedPiece) {  },
               ),
             )
             : GestureDetector(
@@ -105,6 +106,7 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
                       position: piece.position,
                       cellSize: widget.cellSize * 2,
                       onTap: () {},
+                      onDragStart: (touchPosition, draggedPiece) {  },
                     ),
                   ),
                 ),
@@ -115,6 +117,7 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
                     position: null,
                     cellSize: widget.cellSize,
                     onTap: () {},
+                    onDragStart: (touchPosition, draggedPiece) {  },
                   ),
                 ),
                 onDragStarted: () => widget.onDragStarted(piece),
@@ -124,6 +127,7 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
                   position: null,
                   cellSize: widget.cellSize,
                   onTap: () => onPieceTapped(piece),
+                  onDragStart: (touchPosition, draggedPiece) {  },
                 ),
               ),
             ),

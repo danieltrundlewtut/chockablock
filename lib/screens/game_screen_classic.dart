@@ -48,6 +48,7 @@ class _GameScreenState extends State<GameScreen> {
         cellSize: cellSize,
         position: position,
         onTap: () => onPieceRemoved(piece),
+        onDragStart: (touchPosition, draggedPiece) {  },
       );
 
       if (!placedPieces.any((p) => p.piece.id == piece.id)) {
