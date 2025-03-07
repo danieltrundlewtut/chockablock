@@ -6,6 +6,7 @@ class ChockABlockPiece {
   List<List<bool>> pattern;
   final Color color;
   BoardPosition? position;
+  bool isStartingPiece = false;
 
   ChockABlockPiece({
     required this.id,

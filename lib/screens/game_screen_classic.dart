@@ -2,6 +2,7 @@ import 'package:chockablock/models/piece.dart';
 import 'package:chockablock/widgets/piece_widget.dart';
 import 'package:chockablock/widgets/pieces_interface_widget.dart';
 import 'package:flutter/material.dart';
+import '../helpers/piece_placement.dart';
 import '../models/board_position.dart';
 import '../widgets/board_widget.dart';
 import '../data/piece_data.dart';
@@ -19,11 +20,28 @@ class _GameScreenState extends State<GameScreen> {
   ChockABlockPiece? draggingPiece;
   late double boardWidth;
   late double cellSize;
+  late StartingPiecePlacement pieceGenerator;
 
   @override
   void initState() {
     super.initState();
     availablePieces = PieceData.getAllPieces();
+    pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _placeInitialPiece();
+    });
+  }
+
+  void _placeInitialPiece() {
+    ChockABlockPiece initialPiece = pieceGenerator.selectAndPlaceInitialPiece();
+
+    if (initialPiece.position != null) {
+      onPiecePlaced(
+          initialPiece,
+          initialPiece.position!.row,
+          initialPiece.position!.col
+      );
+    }
   }
 
   void _updateSizes() {
@@ -72,6 +90,19 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  void resetGame() {
+    setState(() {
+      for (var placedPiece in placedPieces) {
+        if (!availablePieces.any((p) => p.id == placedPiece.piece.id)) {
+          availablePieces.add(placedPiece.piece);
+        }
+      }
+      placedPieces = [];
+
+      _placeInitialPiece();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     _updateSizes();
@@ -90,7 +121,7 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               Column(
                 children: [
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 10),
                   Center(
                     child: GameBoard(
                       cellSize: cellSize,
@@ -100,7 +131,7 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 64.0, vertical: 16.0),
                     child: Center(
                       child: PiecesInterface(
                         pieces: availablePieces,
