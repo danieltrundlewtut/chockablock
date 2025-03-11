@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../helpers/piece_placement.dart';
 import '../models/board_position.dart';
 import '../widgets/board_widget.dart';
+import '../widgets/restartbutton_widget.dart';
 import '../data/piece_data.dart';
 
 class GameScreen extends StatefulWidget {
@@ -92,13 +93,35 @@ class _GameScreenState extends State<GameScreen> {
 
   void resetGame() {
     setState(() {
+      // First, collect all pieces (both placed and available)
+      List<ChockABlockPiece> allPieces = [];
+
+      // Add available pieces
+      allPieces.addAll(availablePieces);
+
+      // Add placed pieces
       for (var placedPiece in placedPieces) {
-        if (!availablePieces.any((p) => p.id == placedPiece.piece.id)) {
-          availablePieces.add(placedPiece.piece);
+        ChockABlockPiece piece = placedPiece.piece;
+        if (!allPieces.any((p) => p.id == piece.id)) {
+          allPieces.add(piece);
         }
       }
-      placedPieces = [];
 
+      // Reset all pieces to their initial state
+      for (var piece in allPieces) {
+        piece.resetOrientation(); // Reset to original pattern
+        piece.position = null;
+        piece.isStartingPiece = false;
+      }
+
+      // Clear the current state
+      placedPieces = [];
+      availablePieces = allPieces; // All pieces are now available
+
+      // Create a fresh piece generator with the reset pieces
+      pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
+
+      // Place a new initial piece
       _placeInitialPiece();
     });
   }
@@ -154,6 +177,15 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                 ],
+              ),
+
+              // Restart button - positioned on top layer
+              Positioned(
+                top: 10, // Position from top
+                right: 10, // Position from right
+                child: RestartButton(
+                  onPressed: resetGame,
+                ),
               ),
             ],
           ),
