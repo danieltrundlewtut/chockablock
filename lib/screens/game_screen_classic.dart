@@ -1,12 +1,13 @@
-import 'package:chockablock/models/piece.dart';
-import 'package:chockablock/widgets/piece_widget.dart';
-import 'package:chockablock/widgets/pieces_interface_widget.dart';
 import 'package:flutter/material.dart';
+import '../data/piece_data.dart';
 import '../helpers/piece_placement.dart';
 import '../models/board_position.dart';
+import '../models/piece.dart';
 import '../widgets/board_widget.dart';
+import '../widgets/piece_widget.dart';
+import '../widgets/pieces_interface_widget.dart';
 import '../widgets/restartbutton_widget.dart';
-import '../data/piece_data.dart';
+import '../widgets/win_menu_widget.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -80,6 +81,12 @@ class _GameScreenState extends State<GameScreen> {
       }
       draggingPiece = null;
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_checkWinCondition()) {
+        _showWinMenu();
+      }
+    });
   }
 
   void onPieceRemoved(ChockABlockPiece piece) {
@@ -124,6 +131,65 @@ class _GameScreenState extends State<GameScreen> {
       // Place a new initial piece
       _placeInitialPiece();
     });
+  }
+
+  // Add this method to your _GameScreenState class to check for win condition
+  bool _checkWinCondition() {
+    // Create a 2D grid to represent the board (5 rows x 11 columns)
+    List<List<bool>> boardGrid = List.generate(
+        5, (_) => List.generate(11, (_) => false)
+    );
+
+    // Mark all cells covered by pieces
+    for (var pieceWidget in placedPieces) {
+      final piece = pieceWidget.piece;
+      if (piece.position != null) {
+        for (int row = 0; row < piece.pattern.length; row++) {
+          for (int col = 0; col < piece.pattern[row].length; col++) {
+            if (piece.pattern[row][col]) {
+              final boardRow = piece.position!.row + row;
+              final boardCol = piece.position!.col + col;
+
+              // Make sure we're within board boundaries
+              if (boardRow >= 0 && boardRow < 5 &&
+                  boardCol >= 0 && boardCol < 11) {
+                boardGrid[boardRow][boardCol] = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check if all cells are filled
+    for (int row = 0; row < 5; row++) {
+      for (int col = 0; col < 11; col++) {
+        if (!boardGrid[row][col]) {
+          return false; // Found an empty cell
+        }
+      }
+    }
+
+    return true; // All cells are filled
+  }
+
+  void _showWinMenu() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WinMenu(
+          onNewGame: () {
+            Navigator.of(context).pop(); // Close the dialog
+            resetGame();
+          },
+          onSetupGame: () {
+            Navigator.of(context).pop(); // Close the dialog
+            // Setup game functionality can be implemented later
+          },
+        );
+      },
+    );
   }
 
   @override
