@@ -46,51 +46,49 @@ class _GameBoardState extends State<GameBoard> {
     return BoardPosition(row, col);
   }
 
+  // Modified collision detection function that only considers active cells
   bool _doPiecesCollide(ChockABlockPiece piece, BoardPosition position, ChockABlockPiece placedPiece) {
     if (placedPiece.position == null) return false;
     if (placedPiece == piece) return false;
 
-    for (int row = 0; row < piece.pattern.length; row++) {
-      for (int col = 0; col < piece.pattern[row].length; col++) {
-        if (piece.pattern[row][col]) {
-          int newRow = position.row + row;
-          int newCol = position.col + col;
+    // Get active cells for both pieces
+    List<List<int>> activeCells = piece.getActiveCells();
+    List<List<int>> placedActiveCells = placedPiece.getActiveCells();
 
-          for (int pieceX = 0; pieceX < placedPiece.pattern.length; pieceX++) {
-            for (int pieceY = 0; pieceY < placedPiece.pattern[pieceX].length; pieceY++) {
-              if (placedPiece.pattern[pieceX][pieceY]) {
-                int placedRow = placedPiece.position!.row + pieceX;
-                int placedCol = placedPiece.position!.col + pieceY;
+    // Check collisions only for active cells
+    for (final activeCell in activeCells) {
+      int newRow = position.row + activeCell[0];
+      int newCol = position.col + activeCell[1];
 
-                if (newRow == placedRow && newCol == placedCol) {
-                  return true;
-                }
-              }
-            }
-          }
+      for (final placedCell in placedActiveCells) {
+        int placedRow = placedPiece.position!.row + placedCell[0];
+        int placedCol = placedPiece.position!.col + placedCell[1];
+
+        if (newRow == placedRow && newCol == placedCol) {
+          return true;
         }
       }
     }
+
     return false;
   }
 
   bool _isValidPosition(BoardPosition position, ChockABlockPiece piece) {
-    for (int row = 0; row < piece.pattern.length; row++) {
-      for (int col = 0; col < piece.pattern[row].length; col++) {
-        if (piece.pattern[row][col]) {
-          final boardRow = position.row + row;
-          final boardCol = position.col + col;
+    // Get only active cells
+    List<List<int>> activeCells = piece.getActiveCells();
 
-          if (boardRow < 0 || boardRow >= 5 ||
-              boardCol < 0 || boardCol >= 11) {
-            return false;
-          }
+    for (final cell in activeCells) {
+      final boardRow = position.row + cell[0];
+      final boardCol = position.col + cell[1];
 
-          for (var placedPiece in widget.placedPieces) {
-            if (_doPiecesCollide(piece, position, placedPiece.piece)) {
-              return false;
-            }
-          }
+      if (boardRow < 0 || boardRow >= 5 ||
+          boardCol < 0 || boardCol >= 11) {
+        return false;
+      }
+
+      for (var placedPiece in widget.placedPieces) {
+        if (_doPiecesCollide(piece, position, placedPiece.piece)) {
+          return false;
         }
       }
     }
@@ -106,33 +104,31 @@ class _GameBoardState extends State<GameBoard> {
         : Colors.red;
 
     List<Positioned> previewCells = [];
-    final pattern = hoverPiece!.pattern;
 
-    for (int row = 0; row < pattern.length; row++) {
-      for (int col = 0; col < pattern[row].length; col++) {
-        if (pattern[row][col]) {
-          final boardRow = hoverPosition!.row + row;
-          final boardCol = hoverPosition!.col + col;
+    // Only show preview for active cells
+    List<List<int>> activeCells = hoverPiece!.getActiveCells();
 
-          previewCells.add(
-            Positioned(
-              left: boardCol * widget.cellSize,
-              top: boardRow * widget.cellSize,
-              child: Container(
-                width: widget.cellSize,
-                height: widget.cellSize,
-                decoration: BoxDecoration(
-                  color: previewColor.withOpacity(0.3),
-                  border: Border.all(
-                    color: previewColor.withOpacity(0.5),
-                    width: 2,
-                  ),
-                ),
+    for (final cell in activeCells) {
+      final boardRow = hoverPosition!.row + cell[0];
+      final boardCol = hoverPosition!.col + cell[1];
+
+      previewCells.add(
+        Positioned(
+          left: boardCol * widget.cellSize,
+          top: boardRow * widget.cellSize,
+          child: Container(
+            width: widget.cellSize,
+            height: widget.cellSize,
+            decoration: BoxDecoration(
+              color: previewColor.withOpacity(0.3),
+              border: Border.all(
+                color: previewColor.withOpacity(0.5),
+                width: 2,
               ),
             ),
-          );
-        }
-      }
+          ),
+        ),
+      );
     }
 
     return previewCells;
@@ -145,6 +141,29 @@ class _GameBoardState extends State<GameBoard> {
       isValidPlacement = false;
       isDragging = false;
     });
+  }
+
+  // Helper to find the piece at a specific board position
+  ChockABlockPiece? _findPieceAtPosition(int boardRow, int boardCol) {
+    for (var placedPieceWidget in widget.placedPieces) {
+      final piece = placedPieceWidget.piece;
+      if (piece.position == null) continue;
+
+      // Check if any active cell in this piece is at the specified board position
+      for (int row = 0; row < piece.pattern.length; row++) {
+        for (int col = 0; col < piece.pattern[row].length; col++) {
+          if (piece.pattern[row][col]) {
+            final pieceRow = piece.position!.row + row;
+            final pieceCol = piece.position!.col + col;
+
+            if (pieceRow == boardRow && pieceCol == boardCol) {
+              return piece;
+            }
+          }
+        }
+      }
+    }
+    return null;
   }
 
   @override
@@ -182,10 +201,10 @@ class _GameBoardState extends State<GameBoard> {
       builder: (context, candidateData, rejectedData) {
         return Container(
           decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black38),
-              borderRadius: BorderRadius.circular(4),
-            ),
+            color: Colors.white,
+            border: Border.all(color: Colors.black38),
+            borderRadius: BorderRadius.circular(4),
+          ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [

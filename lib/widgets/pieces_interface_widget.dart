@@ -68,7 +68,7 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: displayPieces.map((piece) {

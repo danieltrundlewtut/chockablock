@@ -16,11 +16,25 @@ class ChockABlockPiece {
   }) {
     ogPattern = List.generate(
       pattern.length,
-      (row) => List.generate(
+          (row) => List.generate(
         pattern[row].length,
-          (col) => pattern[row][col],
+            (col) => pattern[row][col],
       ),
     );
+  }
+
+  List<List<int>> getActiveCells() {
+    List<List<int>> activeCells = [];
+
+    for (int row = 0; row < pattern.length; row++) {
+      for (int col = 0; col < pattern[row].length; col++) {
+        if (pattern[row][col]) {
+          activeCells.add([row, col]);
+        }
+      }
+    }
+
+    return activeCells;
   }
 
   void rotateRight() {
@@ -47,7 +61,7 @@ class ChockABlockPiece {
     pattern = List.generate(
       ogPattern.length,
           (row) => List.generate(
-            ogPattern[row].length,
+        ogPattern[row].length,
             (col) => ogPattern[row][col],
       ),
     );
