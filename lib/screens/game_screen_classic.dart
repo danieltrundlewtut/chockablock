@@ -68,6 +68,7 @@ class _GameScreenState extends State<GameScreen> {
         cellSize: cellSize,
         position: position,
         onTap: () => onPieceRemoved(piece),
+        onDragStart: (touchPosition, draggedPiece) {  },
       );
 
       if (!placedPieces.any((p) => p.piece.id == piece.id)) {
@@ -225,7 +226,7 @@ class _GameScreenState extends State<GameScreen> {
                       child: PiecesInterface(
                         pieces: availablePieces,
                         placedPieces: placedPieces,
-                        cellSize: cellSize * 0.4,
+                        cellSize: cellSize * 0.393,
                         draggingPiece: draggingPiece,
                         onDragStarted: (piece) {
                           setState(() {

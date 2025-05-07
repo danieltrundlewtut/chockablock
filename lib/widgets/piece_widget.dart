@@ -1,6 +1,6 @@
 import 'package:chockablock/models/board_position.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../helpers/tap_detection.dart';
 import '../models/piece.dart';
 
 class PieceWidget extends StatelessWidget {
@@ -8,6 +8,7 @@ class PieceWidget extends StatelessWidget {
   final double cellSize;
   final VoidCallback onTap;
   final BoardPosition? position;
+  final Function(Offset, ChockABlockPiece)? onDragStart;
 
   const PieceWidget({
     super.key,
@@ -15,120 +16,66 @@ class PieceWidget extends StatelessWidget {
     required this.cellSize,
     required this.onTap,
     required this.position,
+    this.onDragStart,
   });
-
-  Widget _buildPieceContent() {
-    return SizedBox(
-      width: piece.pattern[0].length * cellSize,
-      height: piece.pattern.length * cellSize,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(piece.pattern.length, (row) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(piece.pattern[row].length, (col) {
-              final isActive = piece.pattern[row][col];
-              return GestureDetector(
-                onTap: isActive && !piece.isStartingPiece ? onTap : null,
-                child: Container(
-                  width: cellSize,
-                  height: cellSize,
-                  decoration: BoxDecoration(
-                    color: isActive ? piece.color : Colors.transparent,
-                    border: isActive ? Border.all(color: Colors.black26) : null,
-                  ),
-                ),
-              );
-            }),
-          );
-        }),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
+    // Instead of using a simple SizedBox, we'll create a Stack with individually positioned active cells
+    // This ensures only active cells respond to taps
+    Widget pieceContent = SizedBox(
+      width: piece.pattern[0].length * cellSize,
+      height: piece.pattern.length * cellSize,
+      child: Stack(
+        children: [
+          // First, we'll create the visual representation of all cells
+          for (int row = 0; row < piece.pattern.length; row++)
+            for (int col = 0; col < piece.pattern[row].length; col++)
+              if (piece.pattern[row][col]) // Only render active cells
+                Positioned(
+                  top: row * cellSize,
+                  left: col * cellSize,
+                  child: Container(
+                    width: cellSize,
+                    height: cellSize,
+                    decoration: BoxDecoration(
+                      color: piece.color,
+                      border: Border.all(color: Colors.black26),
+                    ),
+                  ),
+                ),
+
+          // Then we overlay tap detectors ONLY on active cells
+          for (int row = 0; row < piece.pattern.length; row++)
+            for (int col = 0; col < piece.pattern[row].length; col++)
+              if (piece.pattern[row][col] && !piece.isStartingPiece) // Only add gesture detectors to active cells
+                Positioned(
+                  top: row * cellSize,
+                  left: col * cellSize,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque, // Important for proper hit testing
+                    onTap: onTap,
+                    child: Container(
+                      width: cellSize,
+                      height: cellSize,
+                      color: Colors.transparent, // Invisible but captures gestures
+                    ),
+                  ),
+                ),
+        ],
+      ),
+    );
+
+    // If this piece is on the board and not a starting piece, make it draggable
     if (position != null && !piece.isStartingPiece) {
       return CustomDraggableWidget(
         piece: piece,
         cellSize: cellSize,
-        pieceContent: _buildPieceContent(),
+        pieceContent: pieceContent,
+        onDragStart: onDragStart,
       );
     }
 
-    return _buildPieceContent();
-  }
-}
-
-class CustomDraggableWidget extends StatefulWidget {
-  final ChockABlockPiece piece;
-  final double cellSize;
-  final Widget pieceContent;
-
-  const CustomDraggableWidget({
-    super.key,
-    required this.piece,
-    required this.cellSize,
-    required this.pieceContent,
-  });
-
-  @override
-  State<CustomDraggableWidget> createState() => _CustomDraggableWidgetState();
-}
-
-class _CustomDraggableWidgetState extends State<CustomDraggableWidget> {
-  bool canDrag = false;
-  Offset? dragStartPosition;
-
-  @override
-  Widget build(BuildContext context) {
-    return Draggable<ChockABlockPiece>(
-      data: widget.piece,
-      feedback: Opacity(
-        opacity: 0.5,
-        child: widget.pieceContent,
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: widget.pieceContent,
-      ),
-      onDragStarted: () {
-        if (!canDrag) {
-          final RenderBox box = context.findRenderObject() as RenderBox;
-          final position = box.localToGlobal(Offset.zero);
-          GestureBinding.instance.handlePointerEvent(PointerUpEvent(
-            position: position,
-          ));
-        }
-      },
-      child: GestureDetector(
-        onPanDown: (details) {
-          final localPosition = details.localPosition;
-          final row = (localPosition.dy / widget.cellSize).floor();
-          final col = (localPosition.dx / widget.cellSize).floor();
-
-          canDrag = false;
-          if (row >= 0 && row < widget.piece.pattern.length &&
-              col >= 0 && col < widget.piece.pattern[0].length) {
-            canDrag = widget.piece.pattern[row][col];
-          }
-
-          dragStartPosition = details.globalPosition;
-        },
-        onPanUpdate: (details) {
-          if (!canDrag && dragStartPosition != null) {
-            if ((details.globalPosition - dragStartPosition!).distance > 10) {
-              // Reset for safety
-              dragStartPosition = null;
-            }
-          }
-        },
-        onPanEnd: (_) {
-          canDrag = false;
-          dragStartPosition = null;
-        },
-        child: widget.pieceContent,
-      ),
-    );
+    return pieceContent;
   }
 }
