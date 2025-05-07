@@ -4,14 +4,24 @@ import 'package:flutter/material.dart';
 class ChockABlockPiece {
   final String id;
   List<List<bool>> pattern;
+  late final List<List<bool>> ogPattern;
   final Color color;
   BoardPosition? position;
+  bool isStartingPiece = false;
 
   ChockABlockPiece({
     required this.id,
     required this.pattern,
     required this.color,
-  });
+  }) {
+    ogPattern = List.generate(
+      pattern.length,
+      (row) => List.generate(
+        pattern[row].length,
+          (col) => pattern[row][col],
+      ),
+    );
+  }
 
   void rotateRight() {
     final rows = pattern.length;
@@ -31,5 +41,15 @@ class ChockABlockPiece {
 
   void flipPiece() {
     pattern = pattern.map((row) => row.reversed.toList()).toList();
+  }
+
+  void resetOrientation() {
+    pattern = List.generate(
+      ogPattern.length,
+          (row) => List.generate(
+            ogPattern[row].length,
+            (col) => ogPattern[row][col],
+      ),
+    );
   }
 }

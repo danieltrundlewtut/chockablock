@@ -25,13 +25,12 @@ class PiecesInterface extends StatefulWidget {
 }
 
 class _PiecesInterfaceState extends State<PiecesInterface> {
-  // Store initial pieces to maintain consistent container size
   late final List<ChockABlockPiece> allPieces;
 
   @override
   void initState() {
     super.initState();
-    allPieces = List.from(widget.pieces);
+    allPieces = List.from(widget.pieces.where((piece) => !piece.isStartingPiece));
   }
 
   void onPieceTapped(ChockABlockPiece piece) {
@@ -62,15 +61,17 @@ class _PiecesInterfaceState extends State<PiecesInterface> {
 
   @override
   Widget build(BuildContext context) {
+    final displayPieces = allPieces.where((piece) => !piece.isStartingPiece).toList();
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: allPieces.map((piece) {
+        children: displayPieces.map((piece) {
           final isAvailable = widget.pieces.any((p) => p.id == piece.id);
           final isPlaced = widget.placedPieces.any((p) => p.piece.id == piece.id);
 
