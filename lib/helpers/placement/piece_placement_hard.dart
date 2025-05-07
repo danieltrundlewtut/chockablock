@@ -1,8 +1,8 @@
 import 'dart:math';
-import '../models/piece.dart';
-import '../models/board_position.dart';
+import '../../models/piece.dart';
+import '../../models/board_position.dart';
 
-class StartingPiecePlacement {
+class OneStartingPiecePlacement {
   final List<ChockABlockPiece> allPieces;
   final Random random = Random();
 
@@ -16,7 +16,7 @@ class StartingPiecePlacement {
   // Maximum attempts to find a valid position
   static const int MAX_ATTEMPTS = 100;
 
-  StartingPiecePlacement(this.allPieces);
+  OneStartingPiecePlacement(this.allPieces);
 
   ChockABlockPiece selectAndPlaceInitialPiece() {
     // Select random piece from the available pieces

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/piece_data.dart';
-import '../helpers/piece_placement.dart';
+import '../helpers/placement/piece_placement_hard.dart';
+import '../helpers/placement/piece_placement_medi.dart';
 import '../models/board_position.dart';
 import '../models/piece.dart';
 import '../widgets/board_widget.dart';
@@ -22,26 +23,34 @@ class _GameScreenState extends State<GameScreen> {
   ChockABlockPiece? draggingPiece;
   late double boardWidth;
   late double cellSize;
-  late StartingPiecePlacement pieceGenerator;
+  late TwoStartingPiecePlacement pieceGenerator;
 
   @override
   void initState() {
     super.initState();
     availablePieces = PieceData.getAllPieces();
-    pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
+    pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _placeInitialPiece();
     });
   }
 
   void _placeInitialPiece() {
-    ChockABlockPiece initialPiece = pieceGenerator.selectAndPlaceInitialPiece();
+    //ChockABlockPiece initialPiece = pieceGenerator.selectAndPlaceInitialPiece();
+    List<ChockABlockPiece> initialPieces = pieceGenerator.selectAndPlaceTwoInitialPieces();
 
-    if (initialPiece.position != null) {
+    /*if (initialPiece.position != null) {
       onPiecePlaced(
           initialPiece,
           initialPiece.position!.row,
           initialPiece.position!.col
+      );
+    }*/
+    for (var piece in initialPieces) {
+      onPiecePlaced(
+        piece,
+        piece.position!.row,
+        piece.position!.col
       );
     }
   }
@@ -127,7 +136,8 @@ class _GameScreenState extends State<GameScreen> {
       availablePieces = allPieces; // All pieces are now available
 
       // Create a fresh piece generator with the reset pieces
-      pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
+      //pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
+      pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
 
       // Place a new initial piece
       _placeInitialPiece();
