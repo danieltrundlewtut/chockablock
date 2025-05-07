@@ -21,14 +21,15 @@ class PieceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Instead of using a simple SizedBox, we'll create a Stack with individually positioned active cells
-    // This ensures only active cells respond to taps
+    // Calculate the total width and height of the piece
+    final int totalWidth = piece.pattern[0].length;
+    final int totalHeight = piece.pattern.length;
+
     Widget pieceContent = SizedBox(
-      width: piece.pattern[0].length * cellSize,
-      height: piece.pattern.length * cellSize,
+      width: totalWidth * cellSize,
+      height: totalHeight * cellSize,
       child: Stack(
         children: [
-          // First, we'll create the visual representation of all cells
           for (int row = 0; row < piece.pattern.length; row++)
             for (int col = 0; col < piece.pattern[row].length; col++)
               if (piece.pattern[row][col]) // Only render active cells
@@ -45,28 +46,38 @@ class PieceWidget extends StatelessWidget {
                   ),
                 ),
 
-          // Then we overlay tap detectors ONLY on active cells
-          for (int row = 0; row < piece.pattern.length; row++)
-            for (int col = 0; col < piece.pattern[row].length; col++)
-              if (piece.pattern[row][col] && !piece.isStartingPiece) // Only add gesture detectors to active cells
-                Positioned(
-                  top: row * cellSize,
-                  left: col * cellSize,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque, // Important for proper hit testing
-                    onTap: onTap,
-                    child: Container(
-                      width: cellSize,
-                      height: cellSize,
-                      color: Colors.transparent, // Invisible but captures gestures
+          if (position == null && !piece.isStartingPiece)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: Container(
+                  color: Colors.transparent, // Invisible
+                ),
+              ),
+            ),
+
+          if (position != null && !piece.isStartingPiece)
+            for (int row = 0; row < piece.pattern.length; row++)
+              for (int col = 0; col < piece.pattern[row].length; col++)
+                if (piece.pattern[row][col]) // Only add gesture detectors to active cells
+                  Positioned(
+                    top: row * cellSize,
+                    left: col * cellSize,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onTap,
+                      child: Container(
+                        width: cellSize,
+                        height: cellSize,
+                        color: Colors.transparent,
+                      ),
                     ),
                   ),
-                ),
         ],
       ),
     );
 
-    // If this piece is on the board and not a starting piece, make it draggable
     if (position != null && !piece.isStartingPiece) {
       return CustomDraggableWidget(
         piece: piece,
