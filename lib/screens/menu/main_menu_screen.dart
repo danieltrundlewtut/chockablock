@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../transitions/menu_transitions.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/setup_menu_widget.dart';
 import '../game_screen_classic.dart';
 import 'options_menu.dart';
 import 'help_menu.dart';
@@ -28,6 +29,17 @@ class MainMenuScreen extends StatelessWidget {
         MaterialPageRoute(builder: (context) => const GameScreen()),
       );
     }
+  }
+
+  void _showSetupGameDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return SetupGameMenu(
+          onBack: () => Navigator.of(context).pop(),
+        );
+      },
+    );
   }
 
   void _navigateToOptionsMenu(BuildContext context) {
@@ -84,7 +96,7 @@ class MainMenuScreen extends StatelessWidget {
     final List<String> buttonTitles = ['Quick game', 'Setup game', 'Options', 'Help', 'Close'];
     final List<VoidCallback> actions = [
           () => _startQuickGame(context),
-          () {}, // Setup game action
+          () => _showSetupGameDialog(context),
           () => _navigateToOptionsMenu(context),
           () => _navigateToHelpMenu(context),
           () => _showExitConfirmationDialog(context),
