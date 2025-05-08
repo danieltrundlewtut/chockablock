@@ -18,7 +18,8 @@ class OneStartingPiecePlacement {
 
   OneStartingPiecePlacement(this.allPieces);
 
-  ChockABlockPiece selectAndPlaceInitialPiece() {
+  List<ChockABlockPiece> selectAndPlaceInitialPiece() {
+    List<ChockABlockPiece> startingPieces = [];
     // Select random piece from the available pieces
     int randomIndex = random.nextInt(allPieces.length);
     ChockABlockPiece selectedPiece = allPieces[randomIndex];
@@ -43,7 +44,8 @@ class OneStartingPiecePlacement {
     selectedPiece.position = validPosition;
     selectedPiece.isStartingPiece = true;
 
-    return selectedPiece;
+    startingPieces.add(selectedPiece);
+    return startingPieces;
   }
 
   // Find a valid position using random attempts, following the requested steps

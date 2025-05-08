@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../data/piece_data.dart';
+import '../enums/game_difficulty_enum.dart';
+import '../enums/game_mode_enum.dart';
+import '../helpers/placement/piece_placement_easy.dart';
 import '../helpers/placement/piece_placement_hard.dart';
 import '../helpers/placement/piece_placement_medi.dart';
 import '../models/board_position.dart';
@@ -11,7 +14,18 @@ import '../widgets/restartbutton_widget.dart';
 import '../widgets/win_menu_widget.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final GameMode gameMode;
+  final GameDifficulty difficulty;
+  final bool customPieces;
+  final List<ChockABlockPiece>? selectedPieces;
+
+  const GameScreen({
+    super.key,
+    this.gameMode = GameMode.classic,
+    this.difficulty = GameDifficulty.easy,
+    this.customPieces = false,
+    this.selectedPieces,
+  });
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -23,40 +37,63 @@ class _GameScreenState extends State<GameScreen> {
   ChockABlockPiece? draggingPiece;
   late double boardWidth;
   late double cellSize;
-  late TwoStartingPiecePlacement pieceGenerator;
+  late dynamic pieceGenerator;
 
   @override
   void initState() {
     super.initState();
     availablePieces = PieceData.getAllPieces();
-    pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
+    _initializePieceGenerator();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _placeInitialPiece();
+      _placeInitialPieces();
     });
   }
 
-  void _placeInitialPiece() {
-    //ChockABlockPiece initialPiece = pieceGenerator.selectAndPlaceInitialPiece();
-    List<ChockABlockPiece> initialPieces = pieceGenerator.selectAndPlaceTwoInitialPieces();
+  void _initializePieceGenerator() {
+    switch (widget.difficulty) {
+      case GameDifficulty.easy:
+        pieceGenerator = ThreeStartingPiecePlacement(List.from(availablePieces));
+        break;
+      case GameDifficulty.hard:
+        pieceGenerator = OneStartingPiecePlacement(List.from(availablePieces));
+        break;
+      default:
+        pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
+        break;
+    }
+  }
 
-    /*if (initialPiece.position != null) {
-      onPiecePlaced(
-          initialPiece,
-          initialPiece.position!.row,
-          initialPiece.position!.col
-      );
-    }*/
+  void _placeInitialPieces() {
+    List<ChockABlockPiece> initialPieces = [];
+    switch (widget.difficulty) {
+      case GameDifficulty.easy:
+        initialPieces = pieceGenerator.selectAndPlaceThreeInitialPieces();
+        break;
+      case GameDifficulty.hard:
+        initialPieces = pieceGenerator.selectAndPlaceInitialPiece();
+        break;
+      default:
+        initialPieces = pieceGenerator.selectAndPlaceTwoInitialPieces();
+        break;
+    }
+
     for (var piece in initialPieces) {
-      onPiecePlaced(
-        piece,
-        piece.position!.row,
-        piece.position!.col
-      );
+      if (piece.position != null) {
+        onPiecePlaced(
+            piece,
+            piece.position!.row,
+            piece.position!.col
+        );
+      }
     }
   }
 
   void _updateSizes() {
-    boardWidth = ((MediaQuery.of(context).size.width) * 0.6);
+    boardWidth = ((MediaQuery
+        .of(context)
+        .size
+        .width) * 0.6);
     cellSize = boardWidth / 11;
   }
 
@@ -77,7 +114,7 @@ class _GameScreenState extends State<GameScreen> {
         cellSize: cellSize,
         position: position,
         onTap: () => onPieceRemoved(piece),
-        onDragStart: (touchPosition, draggedPiece) {  },
+        onDragStart: (touchPosition, draggedPiece) {},
       );
 
       if (!placedPieces.any((p) => p.piece.id == piece.id)) {
@@ -135,12 +172,9 @@ class _GameScreenState extends State<GameScreen> {
       placedPieces = [];
       availablePieces = allPieces; // All pieces are now available
 
-      // Create a fresh piece generator with the reset pieces
-      //pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
-      pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
+      _initializePieceGenerator();
 
-      // Place a new initial piece
-      _placeInitialPiece();
+      _placeInitialPieces();
     });
   }
 
@@ -231,7 +265,8 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 64.0, vertical: 16.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 64.0, vertical: 16.0),
                     child: Center(
                       child: PiecesInterface(
                         pieces: availablePieces,
