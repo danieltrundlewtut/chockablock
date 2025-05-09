@@ -16,14 +16,12 @@ import '../widgets/win_menu_widget.dart';
 class GameScreen extends StatefulWidget {
   final GameMode gameMode;
   final GameDifficulty difficulty;
-  final bool customPieces;
   final List<ChockABlockPiece>? selectedPieces;
 
   const GameScreen({
     super.key,
     this.gameMode = GameMode.classic,
     this.difficulty = GameDifficulty.easy,
-    this.customPieces = false,
     this.selectedPieces,
   });
 
