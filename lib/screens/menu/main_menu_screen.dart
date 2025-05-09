@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../transitions/menu_transitions.dart';
-import '../../widgets/loading_widget.dart';
-import '../../widgets/setup_menu_widget.dart';
+import '../../widgets/misc/loading_widget.dart';
+import '../../widgets/subMenus/setup_menu_widget.dart';
 import '../game_screen_classic.dart';
 import 'options_menu.dart';
 import 'help_menu.dart';

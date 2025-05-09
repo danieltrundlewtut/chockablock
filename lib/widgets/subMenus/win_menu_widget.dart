@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/menu/main_menu_screen.dart';
+import '../../screens/menu/main_menu_screen.dart';
 
 class WinMenu extends StatefulWidget {
   final VoidCallback onNewGame;

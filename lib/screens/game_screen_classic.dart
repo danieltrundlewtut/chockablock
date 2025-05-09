@@ -7,11 +7,14 @@ import '../helpers/placement/piece_placement_hard.dart';
 import '../helpers/placement/piece_placement_medi.dart';
 import '../models/board_position.dart';
 import '../models/piece.dart';
+import '../widgets/buttons/in_game_menu_button_widget.dart';
+import '../widgets/buttons/restart_button_widget.dart';
+import '../widgets/subMenus/in_game_menu_widget.dart';
+import '../widgets/subMenus/setup_menu_widget.dart';
+import '../widgets/subMenus/win_menu_widget.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/pieces_interface_widget.dart';
-import '../widgets/restartbutton_widget.dart';
-import '../widgets/win_menu_widget.dart';
 
 class GameScreen extends StatefulWidget {
   final GameMode gameMode;
@@ -143,6 +146,19 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  void _showGameMenu() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return GameMenu(
+          onRestartPuzzle: restartCurrentPuzzle,
+          onSetupGame: setupNewGame,
+        );
+      },
+    );
+  }
+
   void resetGame() {
     setState(() {
       // First, collect all pieces (both placed and available)
@@ -176,14 +192,46 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  // Add this method to your _GameScreenState class to check for win condition
+  void restartCurrentPuzzle() {
+    setState(() {
+      List<ChockABlockPiece> piecesToRemove = [];
+      for (var placedPiece in placedPieces) {
+        if (!placedPiece.piece.isStartingPiece) {
+          piecesToRemove.add(placedPiece.piece);
+        }
+      }
+
+      for (var piece in piecesToRemove) {
+        placedPieces.removeWhere((placedPiece) => placedPiece.piece.id == piece.id);
+
+        // Reset the piece's orientation and position
+        piece.resetOrientation();
+        piece.position = null;
+
+        // Add back to available pieces if not already there
+        if (!availablePieces.any((p) => p.id == piece.id)) {
+          availablePieces.add(piece);
+        }
+      }
+    });
+  }
+
+  void setupNewGame() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return SetupGameMenu(
+          onBack: () => Navigator.of(dialogContext).pop(),
+        );
+      },
+    ).then((_) { });
+  }
+
   bool _checkWinCondition() {
-    // Create a 2D grid to represent the board (5 rows x 11 columns)
     List<List<bool>> boardGrid = List.generate(
         5, (_) => List.generate(11, (_) => false)
     );
 
-    // Mark all cells covered by pieces
     for (var pieceWidget in placedPieces) {
       final piece = pieceWidget.piece;
       if (piece.position != null) {
@@ -193,7 +241,6 @@ class _GameScreenState extends State<GameScreen> {
               final boardRow = piece.position!.row + row;
               final boardCol = piece.position!.col + col;
 
-              // Make sure we're within board boundaries
               if (boardRow >= 0 && boardRow < 5 &&
                   boardCol >= 0 && boardCol < 11) {
                 boardGrid[boardRow][boardCol] = true;
@@ -204,16 +251,15 @@ class _GameScreenState extends State<GameScreen> {
       }
     }
 
-    // Check if all cells are filled
     for (int row = 0; row < 5; row++) {
       for (int col = 0; col < 11; col++) {
         if (!boardGrid[row][col]) {
-          return false; // Found an empty cell
+          return false;
         }
       }
     }
 
-    return true; // All cells are filled
+    return true;
   }
 
   void _showWinMenu() {
@@ -223,13 +269,12 @@ class _GameScreenState extends State<GameScreen> {
       builder: (BuildContext context) {
         return WinMenu(
           onNewGame: () {
-            Navigator.of(context).pop(); // Close the dialog
+            Navigator.of(context).pop();
             resetGame();
           },
           onSetupGame: () {
-            Navigator.of(context).pop(); // Close the dialog
-            // Setup game functionality can be implemented later
-          },
+            setupNewGame();
+          }
         );
       },
     );
@@ -289,7 +334,10 @@ class _GameScreenState extends State<GameScreen> {
                 ],
               ),
 
-              // Restart button - positioned on top layer
+              GameMenuButton(
+                onPressed: _showGameMenu,
+              ),
+
               Positioned(
                 top: 10, // Position from top
                 right: 10, // Position from right

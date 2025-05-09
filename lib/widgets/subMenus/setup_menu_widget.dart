@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../enums/game_difficulty_enum.dart';
-import '../enums/game_mode_enum.dart';
-import '../../widgets/loading_widget.dart';
-import '../screens/game_screen_classic.dart';
+import '../../enums/game_difficulty_enum.dart';
+import '../../enums/game_mode_enum.dart';
+import '../misc/loading_widget.dart';
+import '../../screens/game_screen_classic.dart';
 
 class SetupGameMenu extends StatefulWidget {
   final Function onBack;
