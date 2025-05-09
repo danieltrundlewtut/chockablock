@@ -16,7 +16,6 @@ class SetupGameMenu extends StatefulWidget {
 class _SetupGameMenuState extends State<SetupGameMenu> {
   String _selectedMode = 'Classic';
   String _selectedDifficulty = 'Medium';
-  bool _chooseStartingPieces = false;
 
   Future<void> _startGame(BuildContext context) async {
     showDialog(
@@ -52,7 +51,6 @@ class _SetupGameMenuState extends State<SetupGameMenu> {
         MaterialPageRoute(
           builder: (context) => GameScreen(
             difficulty: difficulty,
-            customPieces: _chooseStartingPieces,
           ),
         ),
       );
@@ -61,146 +59,126 @@ class _SetupGameMenuState extends State<SetupGameMenu> {
 
   @override
   Widget build(BuildContext context) {
-    // More comfortable sizes
-    const double buttonHeight = 32.0;
-    const double fontSize = 14.0;
-    const double headerFontSize = 18.0;
-    const double spacing = 12.0;
+    double buttonWidth = 150;
+    final availableWidth = MediaQuery.of(context).size.width * 0.6 - 40.0; // Dialog width - padding
+    final buttonSpacing = (availableWidth - (buttonWidth * 3)) / 4; // Divide remaining space evenly
 
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.75,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8, // Limit the height
-        ),
+        width: MediaQuery.of(context).size.width * 0.6,
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fixed header that doesn't scroll
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Setup Game',
-                    style: TextStyle(
-                      fontSize: headerFontSize,
-                      fontWeight: FontWeight.bold,
+            // Header with close button positioned to the right
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Left-aligned title
+                const Text(
+                  'Setup new game',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                // Close button positioned to the right
+                GestureDetector(
+                  onTap: () => widget.onBack(),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 15,
+                      color: Colors.white,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => widget.onBack(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    iconSize: 22,
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+
+            const Text(
+              'Game mode',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: buttonSpacing),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _buildModeButton('Classic', true)
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _buildModeButton('Time Attack!', false, isPremium: true),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _buildModeButton('Limited', false, isPremium: true),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 12),
 
-            // Scrollable content
-            Flexible(
-              child: Scrollbar(
-                thickness: 10.0, // Make the scrollbar visible
-                radius: const Radius.circular(8.0),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Game Mode
-                      const Text(
-                        'Game mode',
-                        style: TextStyle(fontSize: fontSize),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _buildModeButton('Classic', true),
-                          const SizedBox(width: 10),
-                          _buildModeButton('Time Attack', false, isPremium: true),
-                          const SizedBox(width: 10),
-                          _buildModeButton('Move Limit', false, isPremium: true),
-                        ],
-                      ),
-                      const SizedBox(height: spacing),
+            const Text(
+              'Difficulty',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: buttonSpacing),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _buildDifficultyButton('Easy'),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _buildDifficultyButton('Medium'),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: buttonWidth,
+                    child: _buildDifficultyButton('Hard'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
 
-                      // Difficulty
-                      const Text(
-                        'Difficulty',
-                        style: TextStyle(fontSize: fontSize),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _buildDifficultyButton('Easy'),
-                          const SizedBox(width: 10),
-                          _buildDifficultyButton('Medium'),
-                          const SizedBox(width: 10),
-                          _buildDifficultyButton('Hard'),
-                        ],
-                      ),
-                      const SizedBox(height: spacing),
-
-                      // Choose starting pieces
-                      const Text(
-                        'Choose starting piece(s)?',
-                        style: TextStyle(fontSize: fontSize),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _buildChoiceButton('No', !_chooseStartingPieces),
-                          const SizedBox(width: 10),
-                          _buildChoiceButton('Yes', _chooseStartingPieces),
-                        ],
-                      ),
-
-                      if (_chooseStartingPieces) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: buttonHeight,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // To be implemented later
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                            child: const Text('Choose piece(s)', style: TextStyle(fontSize: fontSize)),
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 20),
-
-                      // Play button
-                      Center(
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.3,
-                          height: buttonHeight + 4,
-                          child: ElevatedButton(
-                            onPressed: () => _startGame(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade700,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                            child: const Text(
-                              'Play',
-                              style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+            Center(
+              child: SizedBox(
+                width: 220,
+                height: 33,
+                child: ElevatedButton(
+                  onPressed: () => _startGame(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.5),
+                    ),
+                  ),
+                  child: const Text(
+                    'Play',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -216,7 +194,7 @@ class _SetupGameMenuState extends State<SetupGameMenu> {
 
     return Expanded(
       child: SizedBox(
-        height: 40, // Increased button height
+        height: 30,
         child: ElevatedButton(
           onPressed: enabled ? () {
             setState(() {
@@ -224,27 +202,20 @@ class _SetupGameMenuState extends State<SetupGameMenu> {
             });
           } : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ? Colors.blue : Colors.grey.shade200,
-            foregroundColor: isSelected ? Colors.white : Colors.black,
-            disabledBackgroundColor: Colors.grey.shade300,
-            disabledForegroundColor: Colors.grey.shade600,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            backgroundColor: isSelected ? Colors.orange : Colors.brown.shade400,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.brown.shade400,
+            disabledForegroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  mode,
-                  style: const TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (isPremium) ...[
-                const SizedBox(width: 4),
-                const Icon(Icons.star, size: 14)
-              ],
-            ],
+          child: Text(
+            mode,
+            style: const TextStyle(fontSize: 12),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -256,7 +227,7 @@ class _SetupGameMenuState extends State<SetupGameMenu> {
 
     return Expanded(
       child: SizedBox(
-        height: 40, // Increased button height
+        height: 30,
         child: ElevatedButton(
           onPressed: () {
             setState(() {
@@ -264,35 +235,17 @@ class _SetupGameMenuState extends State<SetupGameMenu> {
             });
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ? Colors.blue : Colors.grey.shade200,
-            foregroundColor: isSelected ? Colors.white : Colors.black,
+            backgroundColor: isSelected ? Colors.orange : Colors.brown.shade400,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
           ),
           child: Text(
             difficulty,
-            style: const TextStyle(fontSize: 14),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChoiceButton(String choice, bool isSelected) {
-    return Expanded(
-      child: SizedBox(
-        height: 40, // Increased button height
-        child: ElevatedButton(
-          onPressed: () {
-            setState(() {
-              _chooseStartingPieces = choice == 'Yes';
-            });
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ? Colors.blue : Colors.grey.shade200,
-            foregroundColor: isSelected ? Colors.white : Colors.black,
-          ),
-          child: Text(
-            choice,
-            style: const TextStyle(fontSize: 14),
+            style: const TextStyle(fontSize: 12),
           ),
         ),
       ),
