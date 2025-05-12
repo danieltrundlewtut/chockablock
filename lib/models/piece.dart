@@ -9,6 +9,9 @@ class ChockABlockPiece {
   BoardPosition? position;
   bool isStartingPiece = false;
 
+  int rotationCount = 0;
+  bool isFlipped = false;
+
   ChockABlockPiece({
     required this.id,
     required this.pattern,
@@ -51,10 +54,14 @@ class ChockABlockPiece {
       }
     }
     pattern = rotated;
+
+    rotationCount = (rotationCount + 1) % 4;
   }
 
   void flipPiece() {
     pattern = pattern.map((row) => row.reversed.toList()).toList();
+
+    isFlipped = !isFlipped;
   }
 
   void resetOrientation() {
@@ -65,5 +72,25 @@ class ChockABlockPiece {
             (col) => ogPattern[row][col],
       ),
     );
+
+    // Reset rotation and flip state
+    rotationCount = 0;
+    isFlipped = false;
+  }
+
+  // Utility method to set orientation to a specific state
+  void setOrientation({required int rotations, required bool flipped}) {
+    // First reset to original orientation
+    resetOrientation();
+
+    // Apply flipping if needed
+    if (flipped) {
+      flipPiece();
+    }
+
+    // Apply rotations
+    for (int i = 0; i < rotations; i++) {
+      rotateRight();
+    }
   }
 }
