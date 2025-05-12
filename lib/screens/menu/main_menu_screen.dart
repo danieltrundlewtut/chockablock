@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../transitions/menu_transitions.dart';
+import '../../helpers/puzzle_loader.dart';
 import '../../widgets/misc/loading_widget.dart';
 import '../../widgets/subMenus/setup_menu_widget.dart';
 import '../game_screen_classic.dart';
@@ -28,6 +29,169 @@ class MainMenuScreen extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (context) => const GameScreen()),
       );
+    }
+  }
+
+  Future<void> _loadSavedPuzzle(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const LoadingDialog(message: 'Loading puzzle...');
+      },
+    );
+
+    try {
+      // Get a random puzzle
+      final puzzle = await PuzzleLoader.getRandomPuzzle();
+
+      if (puzzle == null) {
+        if (context.mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No puzzles found. Create some in dev mode!'))
+          );
+        }
+        return;
+      }
+
+      // Get the difficulty from the puzzle
+      final difficultyStr = puzzle['calculatedDifficulty'] ?? puzzle['difficulty'] ?? 'medium';
+      final difficulty = PuzzleLoader.difficultyFromString(difficultyStr);
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GameScreen(
+              difficulty: difficulty,
+              savedPuzzleData: puzzle,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error loading puzzle: $e');
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading puzzle: $e'))
+        );
+      }
+    }
+  }
+
+  Future<void> _choosePuzzleDifficulty(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Choose Difficulty'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _difficultyButton(
+                dialogContext,
+                'Easy',
+                Colors.green,
+                    () => _loadPuzzleWithDifficulty(context, 'easy'),
+              ),
+              const SizedBox(height: 12),
+              _difficultyButton(
+                dialogContext,
+                'Medium',
+                Colors.orange,
+                    () => _loadPuzzleWithDifficulty(context, 'medium'),
+              ),
+              const SizedBox(height: 12),
+              _difficultyButton(
+                dialogContext,
+                'Hard',
+                Colors.red,
+                    () => _loadPuzzleWithDifficulty(context, 'hard'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _difficultyButton(
+      BuildContext context,
+      String label,
+      Color color,
+      VoidCallback onPressed
+      ) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () {
+          Navigator.of(context).pop(); // Close dialog
+          onPressed();
+        },
+        child: Text(label, style: const TextStyle(fontSize: 18)),
+      ),
+    );
+  }
+
+  Future<void> _loadPuzzleWithDifficulty(BuildContext context, String difficulty) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return LoadingDialog(message: 'Loading $difficulty puzzle...');
+      },
+    );
+
+    try {
+      // Get a random puzzle with the specified difficulty
+      final puzzle = await PuzzleLoader.getRandomPuzzle(difficulty: difficulty);
+
+      if (puzzle == null) {
+        if (context.mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('No $difficulty puzzles found. Create some in dev mode!'))
+          );
+        }
+        return;
+      }
+
+      final difficultyEnum = PuzzleLoader.difficultyFromString(difficulty);
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GameScreen(
+              difficulty: difficultyEnum,
+              savedPuzzleData: puzzle,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error loading puzzle: $e');
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error loading puzzle: $e'))
+        );
+      }
     }
   }
 
@@ -93,9 +257,17 @@ class MainMenuScreen extends StatelessWidget {
   }
 
   List<Widget> _buildMenuButtons(double buttonHeight, BuildContext context) {
-    final List<String> buttonTitles = ['Quick game', 'Setup game', 'Options', 'Help', 'Close'];
+    final List<String> buttonTitles = [
+      'Quick game',
+      'Load puzzle',
+      'Setup game',
+      'Options',
+      'Help',
+      'Close'
+    ];
     final List<VoidCallback> actions = [
           () => _startQuickGame(context),
+          () => _choosePuzzleDifficulty(context),
           () => _showSetupGameDialog(context),
           () => _navigateToOptionsMenu(context),
           () => _navigateToHelpMenu(context),
