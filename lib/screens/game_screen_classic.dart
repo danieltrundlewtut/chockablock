@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'dart:async';
 import '../data/piece_data.dart';
 import '../enums/game_difficulty_enum.dart';
 import '../enums/game_mode_enum.dart';
@@ -9,7 +10,7 @@ import '../helpers/placement/piece_placement_hard.dart';
 import '../helpers/placement/piece_placement_medi.dart';
 import '../models/board_position.dart';
 import '../models/piece.dart';
-import '../helpers/puzzle_loader.dart';
+import '../helpers/puzzle_read_write.dart';
 import '../widgets/buttons/in_game_menu_button_widget.dart';
 import '../widgets/buttons/restart_button_widget.dart';
 import '../widgets/subMenus/in_game_menu_widget.dart';
@@ -28,7 +29,7 @@ class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
     this.gameMode = GameMode.classic,
-    this.difficulty = GameDifficulty.easy,
+    this.difficulty = GameDifficulty.hard,
     this.selectedPieces,
     this.savedPuzzleData,
   });
@@ -54,9 +55,6 @@ class _GameScreenState extends State<GameScreen> {
   Map<String, dynamic> puzzleData = {};
   List<ChockABlockPiece> startingPieces = [];
 
-  // Storage for saved puzzles (in-memory instead of file-based)
-  static List<Map<String, dynamic>> savedPuzzles = [];
-
   // Stopwatch for timing puzzle completion
   Stopwatch stopwatch = Stopwatch();
 
@@ -65,10 +63,12 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     availablePieces = PieceData.getAllPieces();
 
+    // Set seed from saved puzzle data if available
     if (widget.savedPuzzleData != null && widget.savedPuzzleData!.containsKey('seed')) {
       seed = widget.savedPuzzleData!['seed'];
     }
 
+    // Only initialize the piece generator if we're not loading a saved puzzle
     if (widget.savedPuzzleData == null) {
       _initializePieceGenerator();
     }
@@ -83,49 +83,6 @@ class _GameScreenState extends State<GameScreen> {
         _placeInitialPieces();
       }
     });
-  }
-
-  void _loadSavedPuzzle() {
-    try {
-      // Clear any existing pieces
-      placedPieces = [];
-      startingPieces = [];
-
-      // Configure the pieces based on the saved data
-      PuzzleLoader.configurePiecesFromPuzzleData(
-          widget.savedPuzzleData!,
-          availablePieces
-      );
-
-      // Place the starting pieces on the board
-      for (var piece in availablePieces) {
-        if (piece.isStartingPiece && piece.position != null) {
-          startingPieces.add(piece);
-          onPiecePlaced(
-              piece,
-              piece.position!.row,
-              piece.position!.col,
-              isInitialPlacement: true
-          );
-        }
-      }
-
-      // Calculate initial filled cells
-      _calculateFilledCells();
-
-      // Initialize puzzle data
-      _initializePuzzleData();
-
-    } catch (e) {
-      print('Error loading saved puzzle: $e');
-      // Only fallback to random puzzle generation if explicitly requested
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading puzzle: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   void _initializePieceGenerator() {
@@ -176,6 +133,48 @@ class _GameScreenState extends State<GameScreen> {
 
     // Initialize puzzle data with starting information
     _initializePuzzleData();
+  }
+
+  void _loadSavedPuzzle() {
+    try {
+      // Clear any existing pieces
+      placedPieces = [];
+      startingPieces = [];
+
+      // Configure the pieces based on the saved data
+      PuzzleManager.configurePiecesFromPuzzleData(
+          widget.savedPuzzleData!,
+          availablePieces
+      );
+
+      // Place the starting pieces on the board
+      for (var piece in availablePieces) {
+        if (piece.isStartingPiece && piece.position != null) {
+          startingPieces.add(piece);
+          onPiecePlaced(
+              piece,
+              piece.position!.row,
+              piece.position!.col,
+              isInitialPlacement: true
+          );
+        }
+      }
+
+      // Calculate initial filled cells
+      _calculateFilledCells();
+
+      // Initialize puzzle data with starting information
+      _initializePuzzleData();
+
+    } catch (e) {
+      print('Error loading saved puzzle: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading puzzle: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _calculateFilledCells() {
@@ -293,40 +292,30 @@ class _GameScreenState extends State<GameScreen> {
 
   void _recordSolutionData() {
     final duration = stopwatch.elapsed;
-    final solutionPlacements = <String, dynamic>{};
 
-    // Get non-starting pieces in placement order
-    int orderIndex = 0;
+    // Get all non-starting pieces that have been placed
+    final List<ChockABlockPiece> placedNonStartingPieces = [];
     for (var placedWidget in placedPieces) {
       final piece = placedWidget.piece;
       if (!piece.isStartingPiece) {
-        solutionPlacements[piece.id] = {
-          'row': piece.position!.row,
-          'col': piece.position!.col,
-          'rotation': piece.rotationCount,
-          'isFlipped': piece.isFlipped,
-          'orderIndex': orderIndex++,
-        };
+        placedNonStartingPieces.add(piece);
       }
     }
 
-    // Calculate difficulty based on time and moves
-    final calculatedDifficulty = calculateDifficulty(
-        duration.inMilliseconds,
-        moveCount
+    // Create the puzzle data using the PuzzleManager
+    puzzleData = PuzzleManager.createPuzzleData(
+      seed: seed,
+      startingPieces: startingPieces,
+      placedPieces: placedNonStartingPieces,
+      filledCells: filledCells,
+      timeMs: duration.inMilliseconds,
+      moves: moveCount,
     );
-
-    // Update puzzle data with solution info
-    puzzleData['placements'] = solutionPlacements;
-    puzzleData['time'] = duration.inMilliseconds;
-    puzzleData['moves'] = moveCount;
-    puzzleData['calculatedDifficulty'] = calculatedDifficulty;
 
     if (isDevMode) {
       // Only save data if this is NOT a pre-stored puzzle
-      // This prevents duplicate recordings
       if (widget.savedPuzzleData == null) {
-        _savePuzzleData();
+        PuzzleManager.savePuzzleData(context, puzzleData);
       } else {
         // If it's a pre-stored puzzle, just show a success message without saving
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -339,256 +328,6 @@ class _GameScreenState extends State<GameScreen> {
         });
       }
     }
-  }
-
-  // Calculate difficulty based on time and moves
-  String calculateDifficulty(int timeMs, int moves) {
-    // Convert time to seconds for easier reading
-    final timeSeconds = timeMs / 1000;
-
-    // Base scoring - higher score means more difficult
-    double difficultyScore = 0;
-
-    // Time-based scoring (weight: 60%)
-    // Medium puzzle example: ~357 seconds (6 minutes)
-    if (timeSeconds < 180) { // Under 3 minutes
-      difficultyScore += 0;
-    } else if (timeSeconds < 420) { // 3-7 minutes
-      difficultyScore += 1.5;
-    } else { // Over 7 minutes
-      difficultyScore += 3;
-    }
-
-    // Moves-based scoring (weight: 40%)
-    // Medium puzzle example: ~129 moves
-    if (moves < 70) {
-      difficultyScore += 0;
-    } else if (moves < 160) {
-      difficultyScore += 1;
-    } else {
-      difficultyScore += 2;
-    }
-
-    // Classification based on overall score
-    // Maximum possible score: 3 + 2 = 5
-    if (difficultyScore < 1.5) {
-      return "Easy";
-    } else if (difficultyScore < 3.0) {
-      return "Medium";
-    } else {
-      return "Hard";
-    }
-  }
-
-  void _savePuzzleData() {
-    try {
-      // Add the new puzzle data with metadata
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final difficulty = widget.difficulty.toString().split('.').last;
-
-      final dataWithMeta = {
-        ...puzzleData,
-        'savedAt': timestamp,
-        'difficulty': difficulty,
-      };
-
-      // Add to our in-memory list
-      savedPuzzles.add(dataWithMeta);
-
-      print('Puzzle data saved to memory');
-
-      // Automatically copy the current puzzle data to clipboard
-      Clipboard.setData(ClipboardData(
-          text: const JsonEncoder.withIndent('  ').convert(dataWithMeta)
-      ));
-
-      // For dev mode, show the data in a dialog with options
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Puzzle data copied to clipboard!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Puzzle Data Saved'),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('✓ Saved to memory'),
-                    const Text('✓ Copied to clipboard'),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text('Solved in: ${(dataWithMeta['time'] / 1000).toStringAsFixed(1)}s'),
-                        const SizedBox(width: 15),
-                        Text('Moves: ${dataWithMeta['moves']}'),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Text('Configured Difficulty: ${dataWithMeta['difficulty']}'),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        const Text('Calculated Difficulty: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text(
-                          dataWithMeta['calculatedDifficulty'] ?? 'Unknown',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: _getDifficultyColor(dataWithMeta['calculatedDifficulty'] ?? ''),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(const JsonEncoder.withIndent('  ').convert(dataWithMeta)),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(
-                        text: const JsonEncoder.withIndent('  ').convert(savedPuzzles)
-                    ));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('All puzzles copied to clipboard')),
-                    );
-                  },
-                  child: const Text('Copy All Puzzles'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _viewAllPuzzles();
-                  },
-                  child: const Text('View All'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-            );
-          },
-        );
-      });
-    } catch (e) {
-      print('Error saving puzzle data: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving puzzle data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // Helper method to get color based on difficulty
-  Color _getDifficultyColor(String difficulty) {
-    switch (difficulty) {
-      case 'Easy':
-        return Colors.green;
-      case 'Medium':
-        return Colors.orange;
-      case 'Hard':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  void _viewAllPuzzles() {
-    Navigator.of(context).pop(); // Close current dialog if open
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('All Saved Puzzles'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: savedPuzzles.isEmpty
-                ? const Text('No puzzles saved yet')
-                : ListView.builder(
-              itemCount: savedPuzzles.length,
-              itemBuilder: (context, index) {
-                final puzzle = savedPuzzles[savedPuzzles.length - 1 - index];
-                final date = DateTime.fromMillisecondsSinceEpoch(
-                    puzzle['savedAt'] ?? 0);
-                final formattedDate =
-                    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-                    '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-
-                return ListTile(
-                  title: Text('${puzzle['difficulty']} puzzle'),
-                  subtitle: Text('$formattedDate\nMoves: ${puzzle['moves']} | Time: ${(puzzle['time'] / 1000).toStringAsFixed(1)}s'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _showPuzzleDetails(puzzle);
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(
-                    text: const JsonEncoder.withIndent('  ').convert(savedPuzzles)
-                ));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('All puzzles copied to clipboard')),
-                );
-              },
-              child: const Text('Copy All'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showPuzzleDetails(dynamic puzzle) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('${puzzle['difficulty']} Puzzle Details'),
-          content: SingleChildScrollView(
-            child: Text(const JsonEncoder.withIndent('  ').convert(puzzle)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(
-                    text: const JsonEncoder.withIndent('  ').convert(puzzle)
-                ));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Puzzle data copied to clipboard')),
-                );
-              },
-              child: const Text('Copy'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _toggleDevMode() {
@@ -823,7 +562,7 @@ class _GameScreenState extends State<GameScreen> {
             _compactDevButton(
               icon: Icons.folder_open,
               tooltip: 'View Puzzles',
-              onPressed: _viewAllPuzzles,
+              onPressed: () => PuzzleManager.showAllPuzzlesDialog(context),
             ),
             const SizedBox(height: 10),
             _compactDevButton(
@@ -831,10 +570,21 @@ class _GameScreenState extends State<GameScreen> {
               tooltip: 'Copy Data',
               onPressed: () {
                 Clipboard.setData(ClipboardData(
-                    text: const JsonEncoder.withIndent('  ').convert(savedPuzzles)
+                    text: const JsonEncoder.withIndent('  ').convert(PuzzleManager.savedPuzzles)
                 ));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('All puzzles copied to clipboard')),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            // Debug button for JSON file
+            _compactDevButton(
+              icon: Icons.bug_report,
+              tooltip: 'Debug JSON',
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Check console for debug info')),
                 );
               },
             ),

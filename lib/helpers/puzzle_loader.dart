@@ -36,8 +36,7 @@ class PuzzleLoader {
   static Future<List<Map<String, dynamic>>> loadPuzzlesByDifficulty(String difficulty) async {
     final allPuzzles = await loadAllPuzzles();
     return allPuzzles.where((puzzle) =>
-    puzzle['calculatedDifficulty'] == difficulty ||
-        puzzle['difficulty'] == difficulty
+    puzzle['calculatedDifficulty'] == difficulty
     ).toList();
   }
 
@@ -59,12 +58,22 @@ class PuzzleLoader {
     return puzzles[random.nextInt(puzzles.length)];
   }
 
+  // Configure the pieces based on the puzzle data
   static void configurePiecesFromPuzzleData(
       Map<String, dynamic> puzzleData,
       List<ChockABlockPiece> pieces
       ) {
+    // First reset all pieces (clear any previous state)
+    for (var piece in pieces) {
+      piece.resetOrientation();
+      piece.position = null;
+      piece.isStartingPiece = false;
+    }
+
+    // Get starting pieces from the puzzle data
     final startingPieces = puzzleData['startingPieces'] as List<dynamic>;
 
+    // Configure starting pieces
     for (var startingPiece in startingPieces) {
       final pieceId = startingPiece['id'];
       final row = startingPiece['row'];
@@ -72,23 +81,30 @@ class PuzzleLoader {
       final rotation = startingPiece['rotation'];
       final isFlipped = startingPiece['isFlipped'];
 
-      final piece = pieces.firstWhere((p) => p.id == pieceId);
+      // Find the piece in the list
+      final piece = pieces.firstWhere((p) => p.id == pieceId,
+          orElse: () => throw Exception('Piece $pieceId not found'));
 
-      piece.position = BoardPosition(row, col);
+      // Configure the piece
       piece.isStartingPiece = true;
+      piece.resetOrientation(); // First reset to original state
 
-      piece.resetOrientation();
-
+      // Apply flip if needed
       if (isFlipped) {
         piece.flipPiece();
       }
 
+      // Apply rotations
       for (int i = 0; i < rotation; i++) {
         piece.rotateRight();
       }
+
+      // Set position last (after orientation is set)
+      piece.position = BoardPosition(row, col);
     }
   }
 
+  // Get the difficulty enum from a string
   static GameDifficulty difficultyFromString(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'easy':

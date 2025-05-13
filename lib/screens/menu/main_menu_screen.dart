@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../helpers/puzzle_read_write.dart';
 import '../../transitions/menu_transitions.dart';
 import '../../helpers/puzzle_loader.dart';
 import '../../widgets/misc/loading_widget.dart';
@@ -82,7 +83,8 @@ class MainMenuScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _choosePuzzleDifficulty(BuildContext context) async {
+// Updated main menu methods using PuzzleManager
+  void _choosePuzzleDifficulty(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -95,21 +97,21 @@ class MainMenuScreen extends StatelessWidget {
                 dialogContext,
                 'Easy',
                 Colors.green,
-                    () => _loadPuzzleWithDifficulty(context, 'easy'),
+                    () => _loadPuzzleWithDifficulty(context, 'Easy'),
               ),
               const SizedBox(height: 12),
               _difficultyButton(
                 dialogContext,
                 'Medium',
                 Colors.orange,
-                    () => _loadPuzzleWithDifficulty(context, 'medium'),
+                    () => _loadPuzzleWithDifficulty(context, 'Medium'),
               ),
               const SizedBox(height: 12),
               _difficultyButton(
                 dialogContext,
                 'Hard',
                 Colors.red,
-                    () => _loadPuzzleWithDifficulty(context, 'hard'),
+                    () => _loadPuzzleWithDifficulty(context, 'Hard'),
               ),
             ],
           ),
@@ -124,29 +126,6 @@ class MainMenuScreen extends StatelessWidget {
     );
   }
 
-  Widget _difficultyButton(
-      BuildContext context,
-      String label,
-      Color color,
-      VoidCallback onPressed
-      ) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        onPressed: () {
-          Navigator.of(context).pop(); // Close dialog
-          onPressed();
-        },
-        child: Text(label, style: const TextStyle(fontSize: 18)),
-      ),
-    );
-  }
-
   Future<void> _loadPuzzleWithDifficulty(BuildContext context, String difficulty) async {
     showDialog(
       context: context,
@@ -158,7 +137,7 @@ class MainMenuScreen extends StatelessWidget {
 
     try {
       // Get a random puzzle with the specified difficulty
-      final puzzle = await PuzzleLoader.getRandomPuzzle(difficulty: difficulty);
+      final puzzle = await PuzzleManager.getRandomPuzzle(difficulty: difficulty);
 
       if (puzzle == null) {
         if (context.mounted) {
@@ -170,7 +149,8 @@ class MainMenuScreen extends StatelessWidget {
         return;
       }
 
-      final difficultyEnum = PuzzleLoader.difficultyFromString(difficulty);
+      // Get difficulty enum from the calculatedDifficulty
+      final difficultyEnum = PuzzleManager.difficultyFromString(difficulty);
 
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
@@ -193,6 +173,28 @@ class MainMenuScreen extends StatelessWidget {
         );
       }
     }
+  }
+  Widget _difficultyButton(
+      BuildContext context,
+      String label,
+      Color color,
+      VoidCallback onPressed
+      ) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () {
+          Navigator.of(context).pop(); // Close dialog
+          onPressed();
+        },
+        child: Text(label, style: const TextStyle(fontSize: 18)),
+      ),
+    );
   }
 
   void _showSetupGameDialog(BuildContext context) {
