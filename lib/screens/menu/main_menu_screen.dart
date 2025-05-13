@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../helpers/puzzle_read_write.dart';
 import '../../transitions/menu_transitions.dart';
-import '../../helpers/puzzle_loader.dart';
+import '../../helpers/puzzle_read_write.dart';
 import '../../widgets/misc/loading_widget.dart';
-import '../../widgets/subMenus/setup_menu_widget.dart';
 import '../game_screen_classic.dart';
 import 'options_menu.dart';
 import 'help_menu.dart';
@@ -33,85 +31,28 @@ class MainMenuScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _loadSavedPuzzle(BuildContext context) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const LoadingDialog(message: 'Loading puzzle...');
-      },
-    );
+  void _showSeedInputDialog(BuildContext context) {
+    final TextEditingController seedController = TextEditingController();
 
-    try {
-      // Get a random puzzle
-      final puzzle = await PuzzleLoader.getRandomPuzzle();
-
-      if (puzzle == null) {
-        if (context.mounted) {
-          Navigator.of(context).pop(); // Close loading dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No puzzles found. Create some in dev mode!'))
-          );
-        }
-        return;
-      }
-
-      // Get the difficulty from the puzzle
-      final difficultyStr = puzzle['calculatedDifficulty'] ?? puzzle['difficulty'] ?? 'medium';
-      final difficulty = PuzzleLoader.difficultyFromString(difficultyStr);
-
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GameScreen(
-              difficulty: difficulty,
-              savedPuzzleData: puzzle,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error loading puzzle: $e');
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading puzzle: $e'))
-        );
-      }
-    }
-  }
-
-// Updated main menu methods using PuzzleManager
-  void _choosePuzzleDifficulty(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Choose Difficulty'),
+          title: const Text('Enter Puzzle Seed'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _difficultyButton(
-                dialogContext,
-                'Easy',
-                Colors.green,
-                    () => _loadPuzzleWithDifficulty(context, 'Easy'),
-              ),
-              const SizedBox(height: 12),
-              _difficultyButton(
-                dialogContext,
-                'Medium',
-                Colors.orange,
-                    () => _loadPuzzleWithDifficulty(context, 'Medium'),
-              ),
-              const SizedBox(height: 12),
-              _difficultyButton(
-                dialogContext,
-                'Hard',
-                Colors.red,
-                    () => _loadPuzzleWithDifficulty(context, 'Hard'),
+              TextField(
+                controller: seedController,
+                decoration: const InputDecoration(
+                  labelText: 'Seed Number',
+                  hintText: 'Enter the puzzle seed',
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                autofocus: true,
               ),
             ],
           ),
@@ -120,36 +61,47 @@ class MainMenuScreen extends StatelessWidget {
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
+            TextButton(
+              onPressed: () {
+                final seedText = seedController.text.trim();
+                if (seedText.isNotEmpty) {
+                  Navigator.of(dialogContext).pop();
+                  _loadPuzzleBySeed(context, int.parse(seedText));
+                }
+              },
+              child: const Text('Load'),
+            ),
           ],
         );
       },
     );
   }
 
-  Future<void> _loadPuzzleWithDifficulty(BuildContext context, String difficulty) async {
+  Future<void> _loadPuzzleBySeed(BuildContext context, int seed) async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return LoadingDialog(message: 'Loading $difficulty puzzle...');
+        return LoadingDialog(message: 'Loading puzzle with seed $seed...');
       },
     );
 
     try {
-      // Get a random puzzle with the specified difficulty
-      final puzzle = await PuzzleManager.getRandomPuzzle(difficulty: difficulty);
+      // Get a puzzle with the specified seed
+      final puzzle = await PuzzleManager.getPuzzleBySeed(seed);
 
       if (puzzle == null) {
         if (context.mounted) {
           Navigator.of(context).pop(); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('No $difficulty puzzles found. Create some in dev mode!'))
+              SnackBar(content: Text('No puzzle found with seed $seed'))
           );
         }
         return;
       }
 
-      // Get difficulty enum from the calculatedDifficulty
+      // Get difficulty from the puzzle
+      final difficulty = puzzle['calculatedDifficulty'] ?? 'Medium';
       final difficultyEnum = PuzzleManager.difficultyFromString(difficulty);
 
       if (context.mounted) {
@@ -173,39 +125,6 @@ class MainMenuScreen extends StatelessWidget {
         );
       }
     }
-  }
-  Widget _difficultyButton(
-      BuildContext context,
-      String label,
-      Color color,
-      VoidCallback onPressed
-      ) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        onPressed: () {
-          Navigator.of(context).pop(); // Close dialog
-          onPressed();
-        },
-        child: Text(label, style: const TextStyle(fontSize: 18)),
-      ),
-    );
-  }
-
-  void _showSetupGameDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return SetupGameMenu(
-          onBack: () => Navigator.of(context).pop(),
-        );
-      },
-    );
   }
 
   void _navigateToOptionsMenu(BuildContext context) {
@@ -262,15 +181,13 @@ class MainMenuScreen extends StatelessWidget {
     final List<String> buttonTitles = [
       'Quick game',
       'Load puzzle',
-      'Setup game',
       'Options',
       'Help',
       'Close'
     ];
     final List<VoidCallback> actions = [
           () => _startQuickGame(context),
-          () => _choosePuzzleDifficulty(context),
-          () => _showSetupGameDialog(context),
+          () => _showSeedInputDialog(context),
           () => _navigateToOptionsMenu(context),
           () => _navigateToHelpMenu(context),
           () => _showExitConfirmationDialog(context),

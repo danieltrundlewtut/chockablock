@@ -568,5 +568,195 @@
     "time": 429866,
     "moves": 115,
     "calculatedDifficulty": "Hard"
+  },
+  {
+    "seed": 1747174333877,
+    "startingPieces": [
+      {
+        "id": "ella",
+        "row": 0,
+        "col": 0,
+        "rotation": 2,
+        "isFlipped": true
+      }
+    ],
+    "placements": {
+      "clifford": {
+        "row": 0,
+        "col": 2,
+        "rotation": 1,
+        "isFlipped": false,
+        "orderIndex": 0
+      },
+      "nina": {
+        "row": 2,
+        "col": 0,
+        "rotation": 0,
+        "isFlipped": true,
+        "orderIndex": 1
+      },
+      "louis": {
+        "row": 1,
+        "col": 1,
+        "rotation": 0,
+        "isFlipped": true,
+        "orderIndex": 2
+      },
+      "betty": {
+        "row": 3,
+        "col": 1,
+        "rotation": 3,
+        "isFlipped": true,
+        "orderIndex": 3
+      },
+      "ronnie": {
+        "row": 1,
+        "col": 4,
+        "rotation": 2,
+        "isFlipped": false,
+        "orderIndex": 4
+      },
+      "ray": {
+        "row": 3,
+        "col": 4,
+        "rotation": 1,
+        "isFlipped": true,
+        "orderIndex": 5
+      },
+      "dizzy": {
+        "row": 3,
+        "col": 8,
+        "rotation": 3,
+        "isFlipped": false,
+        "orderIndex": 6
+      },
+      "charlie": {
+        "row": 1,
+        "col": 6,
+        "rotation": 1,
+        "isFlipped": false,
+        "orderIndex": 7
+      },
+      "billie": {
+        "row": 0,
+        "col": 6,
+        "rotation": 0,
+        "isFlipped": false,
+        "orderIndex": 8
+      },
+      "benny": {
+        "row": 0,
+        "col": 8,
+        "rotation": 2,
+        "isFlipped": false,
+        "orderIndex": 9
+      },
+      "nat": {
+        "row": 1,
+        "col": 8,
+        "rotation": 3,
+        "isFlipped": false,
+        "orderIndex": 10
+      }
+    },
+    "filledCells": 4,
+    "time": 114183,
+    "moves": 33,
+    "calculatedDifficulty": "Easy"
+  },
+  {
+    "seed": 1747174723471,
+    "startingPieces": [
+      {
+        "id": "ella",
+        "row": 0,
+        "col": 1,
+        "rotation": 2,
+        "isFlipped": true
+      }
+    ],
+    "placements": {
+      "ray": {
+        "row": 0,
+        "col": 0,
+        "rotation": 2,
+        "isFlipped": true,
+        "orderIndex": 0
+      },
+      "betty": {
+        "row": 3,
+        "col": 0,
+        "rotation": 3,
+        "isFlipped": true,
+        "orderIndex": 1
+      },
+      "nina": {
+        "row": 0,
+        "col": 2,
+        "rotation": 2,
+        "isFlipped": true,
+        "orderIndex": 2
+      },
+      "nat": {
+        "row": 3,
+        "col": 3,
+        "rotation": 0,
+        "isFlipped": false,
+        "orderIndex": 3
+      },
+      "dizzy": {
+        "row": 3,
+        "col": 8,
+        "rotation": 3,
+        "isFlipped": false,
+        "orderIndex": 4
+      },
+      "ronnie": {
+        "row": 1,
+        "col": 9,
+        "rotation": 0,
+        "isFlipped": true,
+        "orderIndex": 5
+      },
+      "benny": {
+        "row": 0,
+        "col": 8,
+        "rotation": 2,
+        "isFlipped": true,
+        "orderIndex": 6
+      },
+      "charlie": {
+        "row": 2,
+        "col": 5,
+        "rotation": 0,
+        "isFlipped": false,
+        "orderIndex": 7
+      },
+      "louis": {
+        "row": 0,
+        "col": 3,
+        "rotation": 2,
+        "isFlipped": false,
+        "orderIndex": 8
+      },
+      "clifford": {
+        "row": 0,
+        "col": 6,
+        "rotation": 0,
+        "isFlipped": true,
+        "orderIndex": 9
+      },
+      "billie": {
+        "row": 0,
+        "col": 5,
+        "rotation": 1,
+        "isFlipped": false,
+        "orderIndex": 10
+      }
+    },
+    "filledCells": 4,
+    "time": 149824,
+    "moves": 45,
+    "calculatedDifficulty": "Easy"
   }
 ]

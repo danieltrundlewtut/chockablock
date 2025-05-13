@@ -5,9 +5,6 @@ import 'dart:async';
 import '../data/piece_data.dart';
 import '../enums/game_difficulty_enum.dart';
 import '../enums/game_mode_enum.dart';
-import '../helpers/placement/piece_placement_easy.dart';
-import '../helpers/placement/piece_placement_hard.dart';
-import '../helpers/placement/piece_placement_medi.dart';
 import '../models/board_position.dart';
 import '../models/piece.dart';
 import '../helpers/puzzle_read_write.dart';
@@ -29,7 +26,7 @@ class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
     this.gameMode = GameMode.classic,
-    this.difficulty = GameDifficulty.hard,
+    this.difficulty = GameDifficulty.easy,
     this.selectedPieces,
     this.savedPuzzleData,
   });
@@ -44,16 +41,18 @@ class _GameScreenState extends State<GameScreen> {
   ChockABlockPiece? draggingPiece;
   late double boardWidth;
   late double cellSize;
-  late dynamic pieceGenerator;
 
-  // Dev mode properties
+  // Game state variables
+  bool isGameStarted = false;
+  bool isPreparing = true;
   bool isDevMode = false;
+
+  // Puzzle data
   int seed = DateTime.now().millisecondsSinceEpoch;
   int moveCount = 0;
   int filledCells = 0;
-  DateTime? startTime;
-  Map<String, dynamic> puzzleData = {};
   List<ChockABlockPiece> startingPieces = [];
+  Map<String, dynamic> puzzleData = {};
 
   // Stopwatch for timing puzzle completion
   Stopwatch stopwatch = Stopwatch();
@@ -63,76 +62,22 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     availablePieces = PieceData.getAllPieces();
 
-    // Set seed from saved puzzle data if available
-    if (widget.savedPuzzleData != null && widget.savedPuzzleData!.containsKey('seed')) {
-      seed = widget.savedPuzzleData!['seed'];
-    }
+    // If there's saved puzzle data, load it directly
+    if (widget.savedPuzzleData != null) {
+      seed = widget.savedPuzzleData!['seed'] ?? seed;
+      isPreparing = false;
+      isGameStarted = true;
 
-    // Only initialize the piece generator if we're not loading a saved puzzle
-    if (widget.savedPuzzleData == null) {
-      _initializePieceGenerator();
-    }
-
-    startTime = DateTime.now();
-    stopwatch.start();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.savedPuzzleData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadSavedPuzzle();
-      } else {
-        _placeInitialPieces();
-      }
-    });
-  }
-
-  void _initializePieceGenerator() {
-    switch (widget.difficulty) {
-      case GameDifficulty.easy:
-        pieceGenerator = ThreeStartingPiecePlacement(List.from(availablePieces));
-        break;
-      case GameDifficulty.hard:
-        pieceGenerator = OneStartingPiecePlacement(List.from(availablePieces));
-        break;
-      default:
-        pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
-        break;
+        stopwatch.start();
+      });
+    } else {
+      // Otherwise, start in preparation mode with all pieces available
+      isPreparing = true;
+      isGameStarted = false;
+      // Don't start the stopwatch yet - wait until the user clicks "Start Game"
     }
-  }
-
-  void _placeInitialPieces() {
-    List<ChockABlockPiece> initialPieces = [];
-    switch (widget.difficulty) {
-      case GameDifficulty.easy:
-        initialPieces = pieceGenerator.selectAndPlaceThreeInitialPieces();
-        break;
-      case GameDifficulty.hard:
-        initialPieces = pieceGenerator.selectAndPlaceInitialPiece();
-        break;
-      default:
-        initialPieces = pieceGenerator.selectAndPlaceTwoInitialPieces();
-        break;
-    }
-
-    startingPieces = [];
-
-    for (var piece in initialPieces) {
-      if (piece.position != null) {
-        piece.isStartingPiece = true;
-        startingPieces.add(piece);
-        onPiecePlaced(
-            piece,
-            piece.position!.row,
-            piece.position!.col,
-            isInitialPlacement: true
-        );
-      }
-    }
-
-    // Calculate initial filled cells
-    _calculateFilledCells();
-
-    // Initialize puzzle data with starting information
-    _initializePuzzleData();
   }
 
   void _loadSavedPuzzle() {
@@ -175,6 +120,53 @@ class _GameScreenState extends State<GameScreen> {
         ),
       );
     }
+  }
+
+  void _startGame() {
+    // Check if there are any pieces on the board
+    if (placedPieces.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please place at least one piece on the board'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      // Mark all currently placed pieces as starting pieces
+      for (var placedPieceWidget in placedPieces) {
+        final piece = placedPieceWidget.piece;
+        piece.isStartingPiece = true;
+        startingPieces.add(piece);
+      }
+
+      // Update game state
+      isPreparing = false;
+      isGameStarted = true;
+      moveCount = 0; // Reset the move count
+
+      // Generate seed if not already set
+      seed = DateTime.now().millisecondsSinceEpoch;
+
+      // Calculate initial filled cells
+      _calculateFilledCells();
+
+      // Initialize puzzle data
+      _initializePuzzleData();
+
+      // Start the stopwatch
+      stopwatch.start();
+    });
+
+    // Show confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Game started! These pieces are now set as starting pieces.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _calculateFilledCells() {
@@ -237,6 +229,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void onPiecePlaced(ChockABlockPiece piece, int row, int col, {bool isInitialPlacement = false}) {
+    // Check if this is a move (piece is already on the board and being moved)
+    bool isMove = false;
+    if (!isInitialPlacement && piece.position != null) {
+      isMove = (piece.position!.row != row || piece.position!.col != col);
+    }
+
     BoardPosition position = BoardPosition(row, col);
     setState(() {
       piece.position = position;
@@ -254,40 +252,60 @@ class _GameScreenState extends State<GameScreen> {
         availablePieces.removeWhere((p) => p.id == piece.id);
         placedPieces.add(pieceWidget);
 
-        // Increment move count only if it's not an initial placement
-        if (!isInitialPlacement) {
+        // Increment move count only if game has started and it's not an initial placement
+        if (isGameStarted && !isInitialPlacement) {
           moveCount++;
         }
       } else {
         final index = placedPieces.indexWhere((p) => p.piece.id == piece.id);
         if (index != -1) {
           placedPieces[index] = pieceWidget;
+
+          // Count as a move if game has started and piece is being repositioned
+          if (isGameStarted && isMove) {
+            moveCount++;
+          }
         }
       }
       draggingPiece = null;
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_checkWinCondition()) {
-        stopwatch.stop();
-        _recordSolutionData();
-        _showWinMenu();
-      }
-    });
+    // Only check win condition if the game has started
+    if (isGameStarted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_checkWinCondition()) {
+          stopwatch.stop();
+          _recordSolutionData();
+          _showWinMenu();
+        }
+      });
+    }
   }
 
   void onPieceRemoved(ChockABlockPiece piece) {
-    setState(() {
-      placedPieces.removeWhere((widget) => widget.piece.id == piece.id);
-      if (!availablePieces.any((p) => p.id == piece.id)) {
-        availablePieces.add(piece);
+    // If game hasn't started, allow removing any piece
+    // If game has started, only allow removing non-starting pieces
+    if (!isGameStarted || !piece.isStartingPiece) {
+      setState(() {
+        placedPieces.removeWhere((widget) => widget.piece.id == piece.id);
+        if (!availablePieces.any((p) => p.id == piece.id)) {
+          availablePieces.add(piece);
 
-        // If piece is not a starting piece, increment move count
-        if (!piece.isStartingPiece) {
-          moveCount++;
+          // If game has started and piece is not a starting piece, increment move count
+          if (isGameStarted && !piece.isStartingPiece) {
+            moveCount++;
+          }
         }
-      }
-    });
+      });
+    } else {
+      // Notify user that starting pieces can't be removed
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Starting pieces cannot be removed during the game'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _recordSolutionData() {
@@ -358,7 +376,6 @@ class _GameScreenState extends State<GameScreen> {
 
   void resetGame() {
     stopwatch.reset();
-    stopwatch.start();
     moveCount = 0;
 
     setState(() {
@@ -386,21 +403,25 @@ class _GameScreenState extends State<GameScreen> {
       // Clear the current state
       placedPieces = [];
       availablePieces = allPieces; // All pieces are now available
+      startingPieces = [];
 
-      // If we're using a saved puzzle, reload it, otherwise generate a new one
+      // If we're using a saved puzzle, reload it, otherwise reset to preparation mode
       if (widget.savedPuzzleData != null) {
+        isGameStarted = true;
+        isPreparing = false;
+        seed = widget.savedPuzzleData!['seed'] ?? DateTime.now().millisecondsSinceEpoch;
         _loadSavedPuzzle();
+        stopwatch.start();
       } else {
-        seed = DateTime.now().millisecondsSinceEpoch; // Generate new seed
-        _initializePieceGenerator();
-        _placeInitialPieces();
+        isGameStarted = false;
+        isPreparing = true;
+        seed = DateTime.now().millisecondsSinceEpoch;
       }
     });
   }
 
   void restartCurrentPuzzle() {
     stopwatch.reset();
-    stopwatch.start();
     moveCount = 0;
 
     setState(() {
@@ -422,6 +443,11 @@ class _GameScreenState extends State<GameScreen> {
         if (!availablePieces.any((p) => p.id == piece.id)) {
           availablePieces.add(piece);
         }
+      }
+
+      // Restart the stopwatch if we're in a game
+      if (isGameStarted) {
+        stopwatch.start();
       }
     });
   }
@@ -511,6 +537,32 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  Widget _buildStartGameButton() {
+    if (!isPreparing) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 10,
+      right: 70, // Position left of the restart button
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.play_arrow),
+          label: const Text(''),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+          ),
+          onPressed: _startGame,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDevModePanel() {
     if (!isDevMode) return const SizedBox.shrink();
 
@@ -546,6 +598,8 @@ class _GameScreenState extends State<GameScreen> {
                         Text('Filled Cells: $filledCells'),
                         Text('Total Cells: 55'),
                         Text('Completion: ${(filledCells / 55 * 100).toStringAsFixed(1)}%'),
+                        Text('Game Started: ${isGameStarted ? 'Yes' : 'No'}'),
+                        Text('Preparing: ${isPreparing ? 'Yes' : 'No'}'),
                       ],
                     ),
                     actions: [
@@ -557,12 +611,6 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 );
               },
-            ),
-            const SizedBox(height: 10),
-            _compactDevButton(
-              icon: Icons.folder_open,
-              tooltip: 'View Puzzles',
-              onPressed: () => PuzzleManager.showAllPuzzlesDialog(context),
             ),
             const SizedBox(height: 10),
             _compactDevButton(
@@ -578,32 +626,23 @@ class _GameScreenState extends State<GameScreen> {
               },
             ),
             const SizedBox(height: 10),
-            // Debug button for JSON file
-            _compactDevButton(
-              icon: Icons.bug_report,
-              tooltip: 'Debug JSON',
-              onPressed: () async {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Check console for debug info')),
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'M: $moveCount',
-              style: const TextStyle(color: Colors.white, fontSize: 10),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              'T: ${stopwatch.elapsed.inSeconds}s',
-              style: const TextStyle(color: Colors.white, fontSize: 10),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              'F: $filledCells/55',
-              style: const TextStyle(color: Colors.white, fontSize: 10),
-              textAlign: TextAlign.center,
-            ),
+            if (isGameStarted) ...[
+              Text(
+                'M: $moveCount',
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                'T: ${stopwatch.elapsed.inSeconds}s',
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                'F: $filledCells/55',
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
@@ -634,6 +673,15 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     _updateSizes();
+
+    String gameStateText = 'Game not started yet';
+    if (isPreparing) {
+      gameStateText = 'Set up your starting pieces, then press Start Game';
+    } else if (isGameStarted) {
+      gameStateText = isDevMode
+          ? 'Moves: $moveCount | Time: ${stopwatch.elapsed.inSeconds}s | Filled: $filledCells/55'
+          : '';
+    }
 
     return Scaffold(
       body: Container(
@@ -682,11 +730,11 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                     ),
                   ),
-                  if (isDevMode)
+                  if (gameStateText.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Text(
-                        'Moves: $moveCount | Time: ${stopwatch.elapsed.inSeconds}s | Filled: $filledCells/55',
+                        gameStateText,
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -698,6 +746,8 @@ class _GameScreenState extends State<GameScreen> {
               ),
 
               _buildDevModeButton(),
+
+              _buildStartGameButton(),
 
               Positioned(
                 top: 10, // Position from top
