@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:math';
 import '../models/piece.dart';
 import '../models/board_position.dart';
 import '../enums/game_difficulty_enum.dart';
@@ -58,6 +57,27 @@ class PuzzleManager {
     }
   }
 
+  // Get a puzzle by seed value
+  static Future<Map<String, dynamic>?> getPuzzleBySeed(int seed) async {
+    final allPuzzles = await loadAllPuzzles();
+
+    try {
+      final matchingPuzzle = allPuzzles.firstWhere(
+            (puzzle) => puzzle['seed'] == seed,
+        orElse: () => throw Exception('No puzzle found with seed $seed'),
+      );
+
+      if (debugMode) {
+        print('Found puzzle with seed $seed: ${matchingPuzzle['calculatedDifficulty']}');
+      }
+
+      return matchingPuzzle;
+    } catch (e) {
+      print('Error finding puzzle by seed: $e');
+      return null;
+    }
+  }
+
   // Load puzzles by difficulty
   static Future<List<Map<String, dynamic>>> loadPuzzlesByDifficulty(String difficulty) async {
     final allPuzzles = await loadAllPuzzles();
@@ -70,18 +90,6 @@ class PuzzleManager {
 
     if (debugMode) {
       print('Found ${matchingPuzzles.length} puzzles with difficulty: $difficulty');
-
-      // If no puzzles found, print details about what we're looking for
-      if (matchingPuzzles.isEmpty && allPuzzles.isNotEmpty) {
-        print('Looking for difficulty: \'$difficulty\'');
-        print('Available difficulties:');
-        final Set<String> availableDifficulties = {};
-        for (var puzzle in allPuzzles) {
-          final diff = puzzle['calculatedDifficulty']?.toString() ?? 'null';
-          availableDifficulties.add(diff);
-        }
-        print(availableDifficulties);
-      }
     }
 
     return matchingPuzzles;
@@ -327,6 +335,9 @@ class PuzzleManager {
                   ],
                 ),
                 const SizedBox(height: 10),
+                Text('Seed: ${puzzleData['seed']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 5),
                 Text(const JsonEncoder.withIndent('  ').convert(puzzleData)),
               ],
             ),
@@ -361,7 +372,10 @@ class PuzzleManager {
 
   // Show dialog with all saved puzzles
   static void showAllPuzzlesDialog(BuildContext context) {
-    Navigator.of(context).pop(); // Close current dialog if open
+    // Close current dialog if open
+    if (ModalRoute.of(context)?.isCurrent == false) {
+      Navigator.of(context).pop();
+    }
 
     showDialog(
       context: context,
@@ -379,13 +393,14 @@ class PuzzleManager {
                 final difficulty = puzzle['calculatedDifficulty'] ?? 'Unknown';
                 final timeSeconds = ((puzzle['time'] ?? 0) / 1000).toStringAsFixed(1);
                 final moves = puzzle['moves'] ?? 0;
+                final seed = puzzle['seed'] ?? 0;
 
                 return ListTile(
-                  title: Text('$difficulty puzzle'),
+                  title: Text('$difficulty puzzle (Seed: $seed)'),
                   subtitle: Text('Time: ${timeSeconds}s | Moves: $moves'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    _showPuzzleDetailsDialog(context, puzzle);
+                    showPuzzleDetailsDialog(context, puzzle);
                   },
                 );
               },
@@ -414,12 +429,14 @@ class PuzzleManager {
   }
 
   // Show dialog with puzzle details
-  static void _showPuzzleDetailsDialog(BuildContext context, Map<String, dynamic> puzzle) {
+  static void showPuzzleDetailsDialog(BuildContext context, Map<String, dynamic> puzzle) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('${puzzle['calculatedDifficulty'] ?? 'Unknown'} Puzzle Details'),
+          title: Text(
+              '${puzzle['calculatedDifficulty'] ?? 'Unknown'} Puzzle (Seed: ${puzzle['seed']})'
+          ),
           content: SingleChildScrollView(
             child: Text(const JsonEncoder.withIndent('  ').convert(puzzle)),
           ),
