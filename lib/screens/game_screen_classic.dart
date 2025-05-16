@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import '../data/piece_data.dart';
-import '../enums/game_difficulty_enum.dart';
 import '../enums/game_mode_enum.dart';
-import '../helpers/placement/piece_placement_easy.dart';
-import '../helpers/placement/piece_placement_hard.dart';
-import '../helpers/placement/piece_placement_medi.dart';
+import '../helpers/piece_placement.dart';
 import '../models/board_position.dart';
 import '../models/piece.dart';
 import '../widgets/buttons/in_game_menu_button_widget.dart';
 import '../widgets/buttons/restart_button_widget.dart';
 import '../widgets/subMenus/in_game_menu_widget.dart';
-import '../widgets/subMenus/setup_menu_widget.dart';
 import '../widgets/subMenus/win_menu_widget.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/piece_widget.dart';
@@ -18,13 +14,11 @@ import '../widgets/pieces_interface_widget.dart';
 
 class GameScreen extends StatefulWidget {
   final GameMode gameMode;
-  final GameDifficulty difficulty;
   final List<ChockABlockPiece>? selectedPieces;
 
   const GameScreen({
     super.key,
     this.gameMode = GameMode.classic,
-    this.difficulty = GameDifficulty.easy,
     this.selectedPieces,
   });
 
@@ -38,55 +32,27 @@ class _GameScreenState extends State<GameScreen> {
   ChockABlockPiece? draggingPiece;
   late double boardWidth;
   late double cellSize;
-  late dynamic pieceGenerator;
+  late StartingPiecePlacement pieceGenerator;
 
   @override
   void initState() {
     super.initState();
     availablePieces = PieceData.getAllPieces();
-    _initializePieceGenerator();
-
+    pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _placeInitialPieces();
+      _placeInitialPiece();
     });
   }
 
-  void _initializePieceGenerator() {
-    switch (widget.difficulty) {
-      case GameDifficulty.easy:
-        pieceGenerator = ThreeStartingPiecePlacement(List.from(availablePieces));
-        break;
-      case GameDifficulty.hard:
-        pieceGenerator = OneStartingPiecePlacement(List.from(availablePieces));
-        break;
-      default:
-        pieceGenerator = TwoStartingPiecePlacement(List.from(availablePieces));
-        break;
-    }
-  }
+  void _placeInitialPiece() {
+    ChockABlockPiece initialPiece = pieceGenerator.selectAndPlaceInitialPiece();
 
-  void _placeInitialPieces() {
-    List<ChockABlockPiece> initialPieces = [];
-    switch (widget.difficulty) {
-      case GameDifficulty.easy:
-        initialPieces = pieceGenerator.selectAndPlaceThreeInitialPieces();
-        break;
-      case GameDifficulty.hard:
-        initialPieces = pieceGenerator.selectAndPlaceInitialPiece();
-        break;
-      default:
-        initialPieces = pieceGenerator.selectAndPlaceTwoInitialPieces();
-        break;
-    }
-
-    for (var piece in initialPieces) {
-      if (piece.position != null) {
-        onPiecePlaced(
-            piece,
-            piece.position!.row,
-            piece.position!.col
-        );
-      }
+    if (initialPiece.position != null) {
+      onPiecePlaced(
+          initialPiece,
+          initialPiece.position!.row,
+          initialPiece.position!.col
+      );
     }
   }
 
@@ -153,7 +119,6 @@ class _GameScreenState extends State<GameScreen> {
       builder: (BuildContext context) {
         return GameMenu(
           onRestartPuzzle: restartCurrentPuzzle,
-          onSetupGame: setupNewGame,
         );
       },
     );
@@ -161,13 +126,9 @@ class _GameScreenState extends State<GameScreen> {
 
   void resetGame() {
     setState(() {
-      // First, collect all pieces (both placed and available)
       List<ChockABlockPiece> allPieces = [];
-
-      // Add available pieces
       allPieces.addAll(availablePieces);
 
-      // Add placed pieces
       for (var placedPiece in placedPieces) {
         ChockABlockPiece piece = placedPiece.piece;
         if (!allPieces.any((p) => p.id == piece.id)) {
@@ -175,20 +136,17 @@ class _GameScreenState extends State<GameScreen> {
         }
       }
 
-      // Reset all pieces to their initial state
       for (var piece in allPieces) {
-        piece.resetOrientation(); // Reset to original pattern
+        piece.resetOrientation();
         piece.position = null;
         piece.isStartingPiece = false;
       }
 
-      // Clear the current state
       placedPieces = [];
-      availablePieces = allPieces; // All pieces are now available
+      availablePieces = allPieces;
 
-      _initializePieceGenerator();
-
-      _placeInitialPieces();
+      pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
+      _placeInitialPiece();
     });
   }
 
@@ -204,27 +162,14 @@ class _GameScreenState extends State<GameScreen> {
       for (var piece in piecesToRemove) {
         placedPieces.removeWhere((placedPiece) => placedPiece.piece.id == piece.id);
 
-        // Reset the piece's orientation and position
         piece.resetOrientation();
         piece.position = null;
 
-        // Add back to available pieces if not already there
         if (!availablePieces.any((p) => p.id == piece.id)) {
           availablePieces.add(piece);
         }
       }
     });
-  }
-
-  void setupNewGame() {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return SetupGameMenu(
-          onBack: () => Navigator.of(dialogContext).pop(),
-        );
-      },
-    ).then((_) { });
   }
 
   bool _checkWinCondition() {
@@ -272,9 +217,6 @@ class _GameScreenState extends State<GameScreen> {
             Navigator.of(context).pop();
             resetGame();
           },
-          onSetupGame: () {
-            setupNewGame();
-          }
         );
       },
     );
