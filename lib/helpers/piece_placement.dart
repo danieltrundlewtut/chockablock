@@ -1,231 +1,278 @@
 import 'dart:math';
 import '../models/piece.dart';
 import '../models/board_position.dart';
-import 'position_score.dart';
 
 class StartingPiecePlacement {
-final List<ChockABlockPiece> allPieces;
-final Random random = Random();
+  final List<ChockABlockPiece> allPieces;
+  final Random random = Random();
 
-StartingPiecePlacement(this.allPieces);
+  static const int BOARD_ROWS = 5;
+  static const int BOARD_COLS = 11;
+  static const int MIN_PIECE_SIZE = 3;
+  static const int MAX_ATTEMPTS = 100;
 
-// Place a random piece on the board avoiding dead spaces
-ChockABlockPiece selectAndPlaceInitialPiece() {
-// Select random piece from the available pieces
-int randomIndex = random.nextInt(allPieces.length);
-ChockABlockPiece selectedPiece = allPieces[randomIndex];
+  StartingPiecePlacement(this.allPieces);
 
-// Apply random orientation
-int rotations = random.nextInt(4); // 0-3 rotations
-bool shouldFlip = random.nextInt(2) == 1; // 50% chance to flip
+  ChockABlockPiece selectAndPlaceInitialPiece() {
+    int randomIndex = random.nextInt(allPieces.length);
+    ChockABlockPiece selectedPiece = allPieces[randomIndex];
+    int rotations = random.nextInt(4);
+    bool shouldFlip = random.nextInt(2) == 1;
 
-// Clone the piece pattern to avoid modifying the original
-/*selectedPiece = ChockABlockPiece(
-      id: selectedPiece.id,
-      pattern: List.from(selectedPiece.pattern.map((row) => List.from(row))),
-      color: selectedPiece.color,
-    );*/
+    for (int i = 0; i < rotations; i++) {
+      selectedPiece.rotateRight();
+    }
+    if (shouldFlip) {
+      selectedPiece.flipPiece();
+    }
 
-// Apply rotations
-for (int i = 0; i < rotations; i++) {
-selectedPiece.rotateRight();
-}
+    BoardPosition validPosition = findValidPositionRandomly(selectedPiece);
 
-if (shouldFlip) {
-selectedPiece.flipPiece();
-}
+    selectedPiece.position = validPosition;
+    selectedPiece.isStartingPiece = true;
+    return selectedPiece;
+  }
 
-// Find a good position for the piece
-BoardPosition bestPosition = findOptimalPosition(selectedPiece);
+  BoardPosition findValidPositionRandomly(ChockABlockPiece piece) {
+    int attempts = 0;
+    while (attempts < MAX_ATTEMPTS) {
+      // Step 1: Take a random position
+      int randomRow = random.nextInt(BOARD_ROWS);
+      int randomCol = random.nextInt(BOARD_COLS);
+      BoardPosition position = BoardPosition(randomRow, randomCol);
 
-// Set the position on the piece
-selectedPiece.position = bestPosition;
+      // Step 2: Check if it fits there (no part outside the board)
+      if (!doesPieceFitOnBoard(piece, position)) {
+        attempts++;
+        continue;
+      }
 
-selectedPiece.isStartingPiece = true;
+      // Step 3: Checks for if it causes an unsolvable problem
+      if (causesSmallIsolatedRegions(piece, position)) {
+        attempts++;
+        continue;
+      }
 
-return selectedPiece;
-}
+      if (piece.id == 'clifford' && isProblematicCliffordPlacement(piece, position)) {
+        attempts++;
+        continue;
+      }
 
-// Find a position that doesn't create dead spaces
-BoardPosition findOptimalPosition(ChockABlockPiece piece) {
-List<BoardPosition> validPositions = getAllValidPositionsFor(piece);
+      if (piece.id == 'ray' && isProblematicRayPlacement(piece, position)) {
+        attempts++;
+        continue;
+      }
 
-if (validPositions.isEmpty) {
-// Fallback to a safe position if no valid positions found
-return BoardPosition(2, 5);
-}
+      if (piece.id == 'benny' && isProblematicBennyPlacement(piece, position)) {
+        attempts++;
+        continue;
+      }
 
-// Score each position based on the "dead space" it might create
-List<PositionScore> scoredPositions = [];
+      return position;
+    }
 
-for (BoardPosition pos in validPositions) {
-double score = evaluatePosition(piece, pos);
-scoredPositions.add(PositionScore(pos, score));
-}
+    int pieceHeight = getPieceHeight(piece);
+    int pieceWidth = getPieceWidth(piece);
 
-// Sort by highest score (best positions first)
-scoredPositions.sort((a, b) => b.score.compareTo(a.score));
+    if (piece.id == 'ray') {
+      return BoardPosition(1, 4);
+    } else if (piece.id == 'benny') {
+      return BoardPosition(1, 3);
+    } else {
+      return BoardPosition(
+          random.nextInt(BOARD_ROWS - pieceHeight),
+          random.nextInt(BOARD_COLS - pieceWidth)
+      );
+    }
+  }
 
-// Pick from the top 3 best positions randomly to add variety
-int selectionRange = min(3, scoredPositions.length);
-int randomBestIndex = random.nextInt(selectionRange);
+  int getPieceHeight(ChockABlockPiece piece) {
+    return piece.pattern.length;
+  }
 
-return scoredPositions[randomBestIndex].position;
-}
+  int getPieceWidth(ChockABlockPiece piece) {
+    int maxWidth = 0;
+    for (var row in piece.pattern) {
+      maxWidth = max(maxWidth, row.length);
+    }
+    return maxWidth;
+  }
 
-// Get all valid positions for a piece on a 5x11 board
-List<BoardPosition> getAllValidPositionsFor(ChockABlockPiece piece) {
-List<BoardPosition> positions = [];
+  bool doesPieceFitOnBoard(ChockABlockPiece piece, BoardPosition position) {
+    for (int row = 0; row < piece.pattern.length; row++) {
+      for (int col = 0; col < piece.pattern[row].length; col++) {
+        if (piece.pattern[row][col]) {
+          final boardRow = position.row + row;
+          final boardCol = position.col + col;
+          if (boardRow < 0 || boardRow >= BOARD_ROWS ||
+              boardCol < 0 || boardCol >= BOARD_COLS) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
 
-for (int row = 0; row < 5; row++) {
-for (int col = 0; col < 11; col++) {
-BoardPosition pos = BoardPosition(row, col);
-if (isValidPosition(pos, piece, [])) {
-positions.add(pos);
-}
-}
-}
+  bool causesSmallIsolatedRegions(ChockABlockPiece piece, BoardPosition position) {
+    List<List<bool>> boardState = List.generate(
+        BOARD_ROWS, (_) => List.generate(BOARD_COLS, (_) => false));
 
-return positions;
-}
+    simulatePlacePiece(boardState, piece, position);
 
-// Check if a position is valid for a piece
-bool isValidPosition(BoardPosition position, ChockABlockPiece piece, List<ChockABlockPiece> placedPieces) {
-for (int row = 0; row < piece.pattern.length; row++) {
-for (int col = 0; col < piece.pattern[row].length; col++) {
-if (piece.pattern[row][col]) {
-final boardRow = position.row + row;
-final boardCol = position.col + col;
+    List<List<int>> connectedGroups = identifyConnectedEmptyRegions(boardState);
 
-if (boardRow < 0 || boardRow >= 5 ||
-boardCol < 0 || boardCol >= 11) {
-return false;
-}
+    for (var group in connectedGroups) {
+      if (group.length < MIN_PIECE_SIZE) {
+        return true;
+      }
+    }
+    return false;
+  }
 
-for (var placedPiece in placedPieces) {
-if (doPiecesCollide(piece, position, placedPiece)) {
-return false;
-}
-}
-}
-}
-}
-return true;
-}
+  bool isProblematicCliffordPlacement(ChockABlockPiece piece, BoardPosition position) {
+    if (piece.id != 'clifford') return false;
 
-// Check if two pieces collide
-bool doPiecesCollide(ChockABlockPiece piece, BoardPosition position, ChockABlockPiece placedPiece) {
-if (placedPiece.position == null) return false;
-if (placedPiece == piece) return false;
+    List<List<bool>> boardState = List.generate(
+        BOARD_ROWS, (_) => List.generate(BOARD_COLS, (_) => false));
 
-for (int row = 0; row < piece.pattern.length; row++) {
-for (int col = 0; col < piece.pattern[row].length; col++) {
-if (piece.pattern[row][col]) {
-int newRow = position.row + row;
-int newCol = position.col + col;
+    simulatePlacePiece(boardState, piece, position);
 
-for (int pieceX = 0; pieceX < placedPiece.pattern.length; pieceX++) {
-for (int pieceY = 0; pieceY < placedPiece.pattern[pieceX].length; pieceY++) {
-if (placedPiece.pattern[pieceX][pieceY]) {
-int placedRow = placedPiece.position!.row + pieceX;
-int placedCol = placedPiece.position!.col + pieceY;
+    bool isVertical = getPieceHeight(piece) > getPieceWidth(piece);
 
-if (newRow == placedRow && newCol == placedCol) {
-return true;
-}
-}
-}
-}
-}
-}
-}
-return false;
-}
+    // Case 1: Vertical clifford along right edge
+    if (isVertical && position.col >= BOARD_COLS - 2) {
+      for (int r = 0; r < BOARD_ROWS; r++) {
+        if (r >= position.row && r < position.row + getPieceHeight(piece))
+          continue;
+        if (position.col + getPieceWidth(piece) - 1 < BOARD_COLS &&
+            !boardState[r][position.col + getPieceWidth(piece) - 1]) {
+          return true;
+        }
+      }
+    }
+    // Case 2: Vertical clifford along left edge
+    if (isVertical && position.col <= 1) {
+      for (int r = 0; r < BOARD_ROWS; r++) {
+        if (r >= position.row && r < position.row + getPieceHeight(piece))
+          continue;
+        if (position.col > 0 && !boardState[r][position.col - 1]) {
+          return true;
+        }
+      }
+    }
+    // Case 3: Horizontal clifford along bottom edge
+    if (!isVertical && position.row >= BOARD_ROWS - 2) {
+      for (int c = 0; c < BOARD_COLS; c++) {
+        if (c >= position.col && c < position.col + getPieceWidth(piece))
+          continue;
+        if (position.row + getPieceHeight(piece) - 1 < BOARD_ROWS &&
+            !boardState[position.row + getPieceHeight(piece) - 1][c]) {
+          return true;
+        }
+      }
+    }
+    // Case 4: Horizontal clifford along top edge
+    if (!isVertical && position.row <= 1) {
+      for (int c = 0; c < BOARD_COLS; c++) {
+        if (c >= position.col && c < position.col + getPieceWidth(piece))
+          continue;
+        if (position.row > 0 && !boardState[position.row - 1][c]) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
-// Evaluate how good a position is (higher score is better)
-double evaluatePosition(ChockABlockPiece piece, BoardPosition position) {
-// Create a board representation to simulate placing the piece
-List<List<bool>> boardState = List.generate(5, (_) => List.generate(11, (_) => false));
+  bool isProblematicRayPlacement(ChockABlockPiece piece, BoardPosition position) {
+    if (piece.id != 'ray') return false;
 
-// Place the piece on the simulated board
-simulatePlacePiece(boardState, piece, position);
+    List<List<bool>> boardState = List.generate(
+        BOARD_ROWS, (_) => List.generate(BOARD_COLS, (_) => false));
 
-// Calculate score based only on dead space factor
-double score = 0.0;
+    simulatePlacePiece(boardState, piece, position);
 
-// Check for isolated cells (dead spaces)
-int isolatedCells = countIsolatedCells(boardState);
+    bool isVertical = isRayVertical(piece);
+    // Case 1: Vertical ray along right edge
+    if (isVertical && position.col >= BOARD_COLS - 2) {
+      return true;
+    }
+    // Case 2: Vertical ray along left edge
+    if (isVertical && position.col <= 1) {
+      return true;
+    }
+    // Case 3: Horizontal ray along bottom edge
+    if (!isVertical && position.row >= BOARD_ROWS - 2) {
+      return true;
+    }
+    // Case 4: Horizontal ray along top edge
+    if (!isVertical && position.row <= 1) {
+      return true;
+    }
+    return false;
+  }
 
-// Heavily penalize positions that create isolated cells
-if (isolatedCells > 0) {
-score -= isolatedCells * 100.0;
-}
+  bool isRayVertical(ChockABlockPiece piece) {
+    return getPieceHeight(piece) > getPieceWidth(piece);
+  }
 
-// Add some small randomness to break ties (0.0 to 1.0)
-score += random.nextDouble();
+  bool isProblematicBennyPlacement(ChockABlockPiece piece, BoardPosition position) {
+    if (piece.id != 'benny') return false;
+    if (position.row == 0 && position.col == 0) return true;
+    int pieceWidth = getPieceWidth(piece);
+    if (position.row == 0 && position.col + pieceWidth >= BOARD_COLS) return true;
+    int pieceHeight = getPieceHeight(piece);
+    if (position.row + pieceHeight >= BOARD_ROWS && position.col == 0) return true;
+    if (position.row + pieceHeight >= BOARD_ROWS && position.col + pieceWidth >= BOARD_COLS) return true;
+    return false;
+  }
 
-return score;
-}
+  void simulatePlacePiece(List<List<bool>> boardState, ChockABlockPiece piece, BoardPosition position) {
+    for (int row = 0; row < piece.pattern.length; row++) {
+      for (int col = 0; col < piece.pattern[row].length; col++) {
+        if (piece.pattern[row][col]) {
+          final boardRow = position.row + row;
+          final boardCol = position.col + col;
+          if (boardRow >= 0 && boardRow < BOARD_ROWS && boardCol >= 0 && boardCol < BOARD_COLS) {
+            boardState[boardRow][boardCol] = true;
+          }
+        }
+      }
+    }
+  }
 
-// Simulate placing a piece on a board representation
-void simulatePlacePiece(List<List<bool>> boardState, ChockABlockPiece piece, BoardPosition position) {
-for (int row = 0; row < piece.pattern.length; row++) {
-for (int col = 0; col < piece.pattern[row].length; col++) {
-if (piece.pattern[row][col]) {
-final boardRow = position.row + row;
-final boardCol = position.col + col;
+  List<List<int>> identifyConnectedEmptyRegions(List<List<bool>> boardState) {
+    List<List<bool>> visited = List.generate(
+        BOARD_ROWS, (_) => List.generate(BOARD_COLS, (_) => false));
+    List<List<int>> connectedGroups = [];
 
-if (boardRow >= 0 && boardRow < 5 && boardCol >= 0 && boardCol < 11) {
-boardState[boardRow][boardCol] = true;
-}
-}
-}
-}
-}
+    for (int row = 0; row < BOARD_ROWS; row++) {
+      for (int col = 0; col < BOARD_COLS; col++) {
+        if (!boardState[row][col] && !visited[row][col]) {
+          List<int> group = [];
+          floodFill(boardState, visited, row, col, group);
+          connectedGroups.add(group);
+        }
+      }
+    }
+    return connectedGroups;
+  }
 
-// Count isolated single cells that might be unfillable
-int countIsolatedCells(List<List<bool>> boardState) {
-int count = 0;
+  void floodFill(List<List<bool>> boardState, List<List<bool>> visited,
+      int row, int col, List<int> group) {
+    if (row < 0 || row >= BOARD_ROWS || col < 0 || col >= BOARD_COLS ||
+        boardState[row][col] || visited[row][col]) {
+      return;
+    }
 
-// Check each empty cell on the board
-for (int row = 0; row < 5; row++) {
-for (int col = 0; col < 11; col++) {
-if (!boardState[row][col] && isIsolatedCell(boardState, row, col)) {
-count++;
-}
-}
-}
-
-return count;
-}
-
-// Check if a cell is isolated such that no piece could fill it
-bool isIsolatedCell(List<List<bool>> boardState, int row, int col) {
-// If cell already filled, it's not isolated
-if (boardState[row][col]) {
-return false;
-}
-
-// Count adjacent empty cells (horizontal and vertical only)
-int emptyNeighbors = 0;
-List<List<int>> directions = [
-[0, 1], [1, 0], [0, -1], [-1, 0]
-];
-
-for (var dir in directions) {
-int newRow = row + dir[0];
-int newCol = col + dir[1];
-
-if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 11) {
-if (!boardState[newRow][newCol]) {
-emptyNeighbors++;
-}
-}
-}
-
-// A cell is potentially problematic if it has 0 or 1 empty neighbors
-// No piece can fill a completely isolated cell (0 neighbors)
-// Very few pieces can fill cells with only 1 neighbor
-return emptyNeighbors <= 1;
-}
+    visited[row][col] = true;
+    group.add(row * BOARD_COLS + col);
+    List<List<int>> directions = [
+      [-1, 0], [0, -1], [0, 1], [1, 0]
+    ];
+    for (var dir in directions) {
+      floodFill(boardState, visited, row + dir[0], col + dir[1], group);
+    }
+  }
 }
