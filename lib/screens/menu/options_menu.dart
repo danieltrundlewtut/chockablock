@@ -12,11 +12,11 @@ class OptionsMenu extends StatefulWidget {
 class _OptionsMenuState extends State<OptionsMenu> {
   int _selectedTab = 0;
 
-  final List<String> _tabs = ['Display', 'Sound', 'Controls', 'Other'];
+  final List<String> _tabs = ['Display', 'Game', 'Sound', 'Other'];
   final List<String> _placeholderContent = [
     'Display settings will go here',
+    'Game settings will go here',
     'Sound settings will go here',
-    'Control settings will go here',
     'Other settings will go here',
   ];
 

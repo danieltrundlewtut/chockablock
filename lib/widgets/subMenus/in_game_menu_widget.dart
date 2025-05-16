@@ -3,12 +3,10 @@ import '../../screens/menu/main_menu_screen.dart';
 
 class GameMenu extends StatefulWidget {
   final VoidCallback onRestartPuzzle;
-  final VoidCallback onSetupGame;
 
   const GameMenu({
     super.key,
     required this.onRestartPuzzle,
-    required this.onSetupGame,
   });
 
   @override
@@ -144,17 +142,9 @@ class _GameMenuState extends State<GameMenu> with SingleTickerProviderStateMixin
                 Colors.blue,
               ),
               _buildMenuButton(
-                'Start New Puzzle',
-                    () {
-                  Navigator.of(context).pop();
-                  widget.onSetupGame();
-                },
-                Colors.blue,
-              ),
-              _buildMenuButton(
                 'Exit to Main Menu',
                 _showExitConfirmation,
-                Colors.red.shade700,
+                Colors.blue,
               ),
             ],
           ),

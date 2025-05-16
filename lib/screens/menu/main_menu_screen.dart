@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../transitions/menu_transitions.dart';
 import '../../widgets/misc/loading_widget.dart';
-import '../../widgets/subMenus/setup_menu_widget.dart';
 import '../game_screen_classic.dart';
 import 'options_menu.dart';
 import 'help_menu.dart';
@@ -29,17 +28,6 @@ class MainMenuScreen extends StatelessWidget {
         MaterialPageRoute(builder: (context) => const GameScreen()),
       );
     }
-  }
-
-  void _showSetupGameDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return SetupGameMenu(
-          onBack: () => Navigator.of(context).pop(),
-        );
-      },
-    );
   }
 
   void _navigateToOptionsMenu(BuildContext context) {
@@ -93,13 +81,12 @@ class MainMenuScreen extends StatelessWidget {
   }
 
   List<Widget> _buildMenuButtons(double buttonHeight, BuildContext context) {
-    final List<String> buttonTitles = ['Quick game', 'Setup game', 'Options', 'Help', 'Close'];
+    final List<String> buttonTitles = ['Play', 'Help', 'Options', 'Close'];
     final List<VoidCallback> actions = [
-          () => _startQuickGame(context),
-          () => _showSetupGameDialog(context),
-          () => _navigateToOptionsMenu(context),
-          () => _navigateToHelpMenu(context),
-          () => _showExitConfirmationDialog(context),
+      () => _startQuickGame(context),
+      () => _navigateToHelpMenu(context),
+      () => _navigateToOptionsMenu(context),
+      () => _showExitConfirmationDialog(context),
     ];
 
     return List.generate(buttonTitles.length, (index) {
@@ -115,7 +102,7 @@ class MainMenuScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
               onPressed: actions[index],
-              child: Text(buttonTitles[index], style: const TextStyle(fontSize: 20)),
+              child: Text(buttonTitles[index], style: const TextStyle(fontSize: 24)),
             ),
           ),
         ),
@@ -127,7 +114,7 @@ class MainMenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double buttonHeight = screenHeight * 0.08;
+    final double buttonHeight = screenHeight * 0.09;
 
     return Scaffold(
       body: Stack(

@@ -3,12 +3,10 @@ import '../../screens/menu/main_menu_screen.dart';
 
 class WinMenu extends StatefulWidget {
   final VoidCallback onNewGame;
-  final VoidCallback onSetupGame;
 
   const WinMenu({
     super.key,
     required this.onNewGame,
-    required this.onSetupGame,
   });
 
   @override
@@ -73,7 +71,6 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 24),
               _buildMenuButton('Start New Game', widget.onNewGame),
-              _buildMenuButton('Set Up Game', widget.onSetupGame),
               _buildMenuButton('Return to Menu', () {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
