@@ -98,7 +98,6 @@ class _GameScreenState extends State<GameScreen> {
       if ((!isPlacedPiece && !piece.isStartingPiece) ||
           (isPlacedPiece && isPositionChanging)) {
         moveCount++;
-        print('Move: $moveCount');
       }
 
       piece.position = newPosition;
