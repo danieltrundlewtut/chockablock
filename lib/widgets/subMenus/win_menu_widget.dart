@@ -55,12 +55,23 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 600;
+
+    final menuWidth = screenSize.width < 400 ? screenSize.width * 0.85 : 300.0;
+
+    final titleFontSize = screenSize.height < 700 ? 22.0 : 30.0;
+    final scoreFontSize = screenSize.height < 700 ? 18.0 : 22.0;
+    final statsFontSize = screenSize.height < 700 ? 10.0 : 12.0;
+    final buttonFontSize = screenSize.height < 700 ? 14.0 : 16.0;
+
     return Center(
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: Container(
-          width: 300,
-          padding: const EdgeInsets.all(24),
+          width: menuWidth,
+          padding: EdgeInsets.all(isSmallScreen ? 10 : 18),
+          constraints: BoxConstraints(maxHeight: screenSize.height * 0.8),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -75,18 +86,18 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'You Win!',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 6 : 12),
 
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
@@ -101,60 +112,66 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
                         const SizedBox(width: 8),
                         Text(
                           'Score: ${widget.score}',
-                          style: const TextStyle(
-                            fontSize: 24,
+                          style: TextStyle(
+                            fontSize: scoreFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.blue,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.timer_outlined, size: 16, color: Colors.blue),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatTime(widget.secondsTaken),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.blue.shade700,
+                    const SizedBox(height: 6),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.timer_outlined, size: 16, color: Colors.blue),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatTime(widget.secondsTaken),
+                                style: TextStyle(
+                                  fontSize: statsFontSize,
+                                  color: Colors.blue.shade700,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            const Icon(Icons.swap_vert, size: 16, color: Colors.blue),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${widget.moveCount} moves',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.blue.shade700,
+                            ],
+                          ),
+                          const SizedBox(width: 16),
+                          Row(
+                            children: [
+                              const Icon(Icons.swap_vert, size: 16, color: Colors.blue),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${widget.moveCount} moves',
+                                style: TextStyle(
+                                  fontSize: statsFontSize,
+                                  color: Colors.blue.shade700,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: isSmallScreen ? 6 : 14),
               _buildMenuButton(
                 'Admire Solution',
                 widget.onDismiss,
                 backgroundColor: Colors.blue,
+                buttonFontSize: buttonFontSize,
               ),
               _buildMenuButton(
                 'Start New Game',
                 widget.onNewGame,
                 backgroundColor: Colors.blue,
+                buttonFontSize: buttonFontSize,
               ),
               _buildMenuButton(
                 'Return to Menu',
@@ -166,6 +183,7 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
                   );
                 },
                 backgroundColor: Colors.blue,
+                buttonFontSize: buttonFontSize,
               ),
             ],
           ),
@@ -179,7 +197,10 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
       VoidCallback onPressed, {
         Color backgroundColor = Colors.blue,
         IconData? icon,
+        required double buttonFontSize,
       }) {
+    final isSmallScreen = MediaQuery.of(context).size.height < 600;
+
     final wrappedOnPressed = text == 'Admire Solution' ? () {
       onPressed();
       Future.delayed(Duration.zero, () {
@@ -190,7 +211,7 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
     } : onPressed;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 3 : 5),
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
@@ -198,18 +219,18 @@ class _WinMenuState extends State<WinMenu> with SingleTickerProviderStateMixin {
           style: ElevatedButton.styleFrom(
             backgroundColor: backgroundColor,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 10),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon),
-                const SizedBox(width: 8),
+                Icon(icon, size: isSmallScreen ? 14 : 18),
+                const SizedBox(width: 6),
               ],
               Text(
                 text,
-                style: const TextStyle(fontSize: 18),
+                style: TextStyle(fontSize: buttonFontSize),
               ),
             ],
           ),
