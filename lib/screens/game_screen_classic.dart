@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../data/piece_data.dart';
 import '../enums/game_mode_enum.dart';
@@ -27,7 +28,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   List<ChockABlockPiece> availablePieces = [];
   List<PieceWidget> placedPieces = [];
   ChockABlockPiece? draggingPiece;
@@ -40,9 +41,17 @@ class _GameScreenState extends State<GameScreen> {
   late double cellSize;
   late StartingPiecePlacement pieceGenerator;
 
+  Timer? _gameTimer;
+  int _elapsedSeconds = 0;
+  bool _isTimerRunning = false;
+  DateTime? _pauseStartTime;
+  int _totalPausedSeconds = 0;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     availablePieces = PieceData.getAllPieces();
     pieceGenerator = StartingPiecePlacement(List.from(availablePieces));
 
@@ -50,9 +59,75 @@ class _GameScreenState extends State<GameScreen> {
     moveCount = 0;
     gameWon = false;
 
+    _startGameTimer();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _placeInitialPiece();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _gameTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (gameWon) return;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _resumeGameTimer();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        _pauseGameTimer();
+        break;
+    }
+  }
+
+  void _startGameTimer() {
+    if (_isTimerRunning) return;
+
+    _isTimerRunning = true;
+    _gameTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted && !gameWon) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _pauseGameTimer() {
+    if (!_isTimerRunning) return;
+
+    _gameTimer?.cancel();
+    _isTimerRunning = false;
+    _pauseStartTime = DateTime.now();
+  }
+
+  void _resumeGameTimer() {
+    if (_isTimerRunning) return;
+
+    if (_pauseStartTime != null) {
+      final pauseDuration = DateTime.now().difference(_pauseStartTime!).inSeconds;
+      _totalPausedSeconds += pauseDuration;
+      _pauseStartTime = null;
+    }
+
+    _startGameTimer();
+  }
+
+  void _stopGameTimer() {
+    _gameTimer?.cancel();
+    _isTimerRunning = false;
   }
 
   void _placeInitialPiece() {
@@ -82,6 +157,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void onPiecePlaced(ChockABlockPiece piece, int row, int col) {
+    if (gameWon) return;
+
     BoardPosition newPosition = BoardPosition(row, col);
     bool isPlacedPiece = piece.position != null;
     bool isPositionChanging = false;
@@ -107,8 +184,8 @@ class _GameScreenState extends State<GameScreen> {
         piece: piece,
         cellSize: cellSize,
         position: newPosition,
-        onTap: () => onPieceRemoved(piece),
-        onDragStart: (touchPosition, draggedPiece) {},
+        onTap: gameWon ? () {} : () => onPieceRemoved(piece),
+        onDragStart: gameWon ? null : (touchPosition, draggedPiece) {},
       );
 
       if (!placedPieces.any((p) => p.piece.id == piece.id)) {
@@ -125,15 +202,21 @@ class _GameScreenState extends State<GameScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_checkWinCondition()) {
+        setState(() {
+          gameWon = true;
+        });
+
         endTime = DateTime.now();
+        _stopGameTimer();
         finalScore = _calculateScore();
-        gameWon = true;
         _showWinMenu();
       }
     });
   }
 
   void onPieceRemoved(ChockABlockPiece piece) {
+    if (gameWon) return;
+
     if (!piece.isStartingPiece) {
       moveCount++;
     }
@@ -164,6 +247,12 @@ class _GameScreenState extends State<GameScreen> {
     moveCount = 0;
     gameWon = false;
     finalScore = null;
+
+    _elapsedSeconds = 0;
+    _totalPausedSeconds = 0;
+    _pauseStartTime = null;
+    _stopGameTimer();
+    _startGameTimer();
 
     setState(() {
       List<ChockABlockPiece> allPieces = [];
@@ -249,14 +338,14 @@ class _GameScreenState extends State<GameScreen> {
 
   int _calculateScore() {
     if (startTime == null || endTime == null) return 0;
-    final secondsTaken = endTime!.difference(startTime!).inSeconds;
+    final secondsTaken = _elapsedSeconds;
 
     const int timeMaxBonus = 1000;
     const int timeMinBonus = 60;
     const int bestTime = 60;
     const int worstTime = 360;
-    final clampedTime = secondsTaken.clamp(bestTime, worstTime);
 
+    final clampedTime = secondsTaken.clamp(bestTime, worstTime);
     final timeProgress = (clampedTime - bestTime) / (worstTime - bestTime);
     final nonlinearTimeProgress = sqrt(timeProgress);
     final timeBonus = (timeMaxBonus - (nonlinearTimeProgress * (timeMaxBonus - timeMinBonus))).round();
@@ -279,7 +368,7 @@ class _GameScreenState extends State<GameScreen> {
     finalScore = _calculateScore();
     gameWon = true;
 
-    final secondsTaken = endTime!.difference(startTime!).inSeconds;
+    final secondsTaken = _elapsedSeconds;
 
     showDialog(
       context: context,
@@ -336,13 +425,13 @@ class _GameScreenState extends State<GameScreen> {
                         pieces: availablePieces,
                         placedPieces: placedPieces,
                         cellSize: cellSize * 0.393,
-                        draggingPiece: draggingPiece,
-                        onDragStarted: (piece) {
+                        draggingPiece: gameWon ? null : draggingPiece,
+                        onDragStarted: gameWon ? (_) {} : (piece) {
                           setState(() {
                             draggingPiece = piece;
                           });
                         },
-                        onDragEnded: (piece) {
+                        onDragEnded: gameWon ? (_) {} : (piece) {
                           if (draggingPiece != null) {
                             setState(() {
                               draggingPiece = null;
@@ -360,8 +449,8 @@ class _GameScreenState extends State<GameScreen> {
               ),
 
               Positioned(
-                top: 10, // Position from top
-                right: 10, // Position from right
+                top: 10,
+                right: 10,
                 child: RestartButton(onPressed: resetGame),
               ),
             ],
